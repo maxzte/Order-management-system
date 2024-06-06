@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="../src/css/main.css">
+    <script type="module" src="../src/js/dish.mjs"></script>
+</head>
+
+<body data-page-id="cold-dishes">
+    <header class="menu_header">
+        <section>
+            <ul class="links">
+                <li class="home">
+                    <a href="#" class="home-button">Home</a>
+                </li>
+                <li class="basket">
+                    <a href="#" class="basket-button">Basket</a>
+                </li>
+                <li class="order">
+                    <a href="#" class="order-button">Orders</a>
+                </li>
+            </ul>
+        </section>
+    </header>
+    <main>
+        <article class="project1">
+            <div class="main-container">
+                <h1 class="project1-header">Меню холодних страв</h1>
+                <div class="project1-description">
+                    <p class="description"></p>
+                </div>
+                <div class="dish-container">
+                    <div class="card">
+                        <img class="card-image" src="" alt="" />
+                    </div>
+                </div>
+                <div class="product">
+                    <button id="addToBasket" class="btn">Add to basket</button>
+                    <button id="decrease" class="btn">-</button>
+                    <span id="quantity">0</span>
+                    <button id="increase" class="btn">+</button>
+                </div>
+                <div class="rating-review">
+                    <!-- <div class="rating">
+                        <span>Оцініть блюдо:</span>
+                        <span class="star" data-value="1">☆</span>
+                        <span class="star" data-value="2">☆</span>
+                        <span class="star" data-value="3">☆</span>
+                        <span class="star" data-value="4">☆</span>
+                        <span class="star" data-value="5">☆</span>
+                    </div> -->
+                    <div class="review">
+                        <div class="container-text-area">
+                            <label class="label-name" for="review"></label>
+                            <textarea class="comment" id="review" name="user-comment" placeholder="Comment"
+                                required></textarea>
+                        </div>
+                        <button id="submit-review" class="btn">Відправити</button>
+                    </div>
+                </div>
+                <div id="reviews-container">
+                    <h2>Відгуки:</h2>
+                    <div id="reviews-list"></div>
+                </div>
+                <!-- <a href="index.html" class="project1-button-back">← Back to the main page</a> -->
+            </div>
+        </article>
+    </main>
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-row">
+                <div class="footer-copyright">
+                    <div class="footer-copyright-name">© Magic Taste</div>
+                    <p>restaurant net</p>
+                </div>
+                <div class="footer-icons">
+                    <p>we are in socials:</p>
+                    <div class="footer-icons-row">
+                        <a href="https://www.instagram.com/magic_taste_bd/" target="_blank" rel="noopener noreferrer">
+                            <img src="../public/static/image/icons/instagram.svg" alt="instagram" />
+                        </a>
+                        <a href="https://www.instagram.com/magic_taste_bd/" target="_blank" rel="noopener noreferrer">
+                            <img src="../public/static/image/icons/facebook.svg" alt="facebook" />
+                        </a>
+
+                        <a href="https://www.instagram.com/magic_taste_bd/" target="_blank" rel="noopener noreferrer">
+                            <img src="../public/static/image/icons/linkedin.svg" alt="linkedin" />
+                        </a>
+                        <a href="#">
+                            <img src="../public/static/image/icons/github.svg" alt="github" />
+                        </a>
+                    </div>
+                </div>
+                <div class="footer-contacts">
+                    <a href="https://www.instagram.com/magic_taste_bd/" class="footer-button" target="_blank"
+                        rel="noopener noreferrer">Contact on instagram</a>
+                    <p>Contact us to get a quote.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+
+</html>

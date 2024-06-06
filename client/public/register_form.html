@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="../src/css/reg_form_styles.css">
+</head>
+
+<body>
+    <section class="container forms">
+        <div class="form login">
+            <div class="form-content">
+                <header>Login</header>
+                <form id="login-form" action="#">
+                    <div class="field input-field">
+                        <input type="email" placeholder="Email" class="Email">
+                        <i class="bx bx-user"></i>
+                        <small class="error-message" id="login-email-error"></small>
+                    </div>
+                    <div class="field input-field">
+                        <input type="password" placeholder="Password" class="Password">
+                        <i class='bx bxs-lock-alt'></i>
+                        <small class="error-message" id="login-password-error"></small>
+                    </div>
+                    <div class="form-link">
+                        <a href="#" class="forgot-pass">Forgot password?</a>
+                    </div>
+                    <div class="field button-field">
+                        <button type="submit">Login</button>
+                    </div>
+                </form>
+                <div class="form-link">
+                    <span>Don't have an account? <a href="#" class="link signup-link">Signup</a></span>
+                </div>
+            </div>
+            <div class="line"></div>
+            <div class="media-options">
+                <a href="#" class="field google">
+                    <span>Login with Google</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="form signup">
+            <div class="form-content">
+                <header>Signup</header>
+                <form id="signup-form" action="#">
+                    <div class="field input-field">
+                        <input type="email" placeholder="Email" class="Email">
+                        <i class="bx bx-user"></i>
+                        <small class="error-message" id="signup-email-error"></small>
+                    </div>
+                    <div class="field input-field">
+                        <input type="password" placeholder="Create password" class="Password">
+                        <i class='bx bxs-lock-alt'></i>
+                        <small class="error-message" id="signup-password-error"></small>
+                    </div>
+                    <div class="field input-field">
+                        <input type="password" placeholder="Confirm password" class="ConfirmPassword">
+                        <i class='bx bxs-lock-alt'></i>
+                        <small class="error-message" id="confirm-password-error"></small>
+                    </div>
+                    <div class="field button-field">
+                        <button type="submit">Signup</button>
+                    </div>
+                </form>
+                <div class="form-link">
+                    <span>Already have an account? <a href="#" class="link login-link">Login</a></span>
+                </div>
+            </div>
+            <div class="line"></div>
+            <div class="media-options">
+                <a href="#" class="field google">
+                    <span>Login with Google</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <script type="module" src="../src/js/validation.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order History - Magic Taste</title>
+  <link rel="stylesheet" href="../src/css/orders.css" />
+  <script type="module" src="../src/js/orders.mjs" defer></script>
+</head>
+
+<body>
+  <header class="menu_header">
+    <section>
+      <ul class="links">
+        <li class="home">
+          <a href="#" class="home-button">Home</a>
+        </li>
+        <li class="basket">
+          <a href="#" class="basket-button">Basket</a>
+        </li>
+      </ul>
+    </section>
+    <div class="head">
+      <h1 class="header-title">Order History</h1>
+      <p class="header-subtitle">Your previous orders</p>
+    </div>
+  </header>
+  <main>
+    <div class="main-container">
+      <div class="section">
+        <div class="order-table-container">
+          <table id="orderTable" class="order-table">
+            <thead>
+              <tr>
+                <th>OrderId</th>
+                <th>Order items</th>
+                <th>Created</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody class="tBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-row">
+        <div class="footer-copyright">
+          <div class="footer-copyright-name">© Magic Taste</div>
+          <p>restaurant net</p>
+        </div>
+        <div class="footer-icons">
+          <p>We are in socials:</p>
+          <div class="footer-icons-row">
+            <a href="https://www.instagram.com/magic_taste_bd/" target="_blank" rel="noopener noreferrer">
+              <img src="../public/static/image/icons/instagram.svg" alt="instagram" />
+            </a>
+            <a href="https://www.instagram.com/magic_taste_bd/" target="_blank" rel="noopener noreferrer">
+              <img src="../public/static/image/icons/facebook.svg" alt="facebook" />
+            </a>
+            <a href="https://www.instagram.com/magic_taste_bd/" target="_blank" rel="noopener noreferrer">
+              <img src="../public/static/image/icons/linkedin.svg" alt="linkedin" />
+            </a>
+            <a href="#">
+              <img src="../public/static/image/icons/github.svg" alt="github" />
+            </a>
+          </div>
+        </div>
+        <div class="footer-contacts">
+          <a href="https://www.instagram.com/magic_taste_bd/" class="footer-button" target="_blank"
+            rel="noopener noreferrer">Contact on instagram</a>
+          <p>Contact us to get a quote.</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+
+</html>
