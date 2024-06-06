@@ -56,6 +56,9 @@ function populateOrders(orders) {
             itemsList.appendChild(listItem);
         });
 
+        const status = document.createElement('td')
+        status.textContent = order.status
+
         const created = document.createElement('td')
         created.textContent = formattedCreatedAt
 
@@ -63,6 +66,7 @@ function populateOrders(orders) {
         itemsCell.appendChild(itemsList);
         orderRow.appendChild(itemsCell);
         orderRow.appendChild(created);
+        orderRow.appendChild(status);
 
         const totalCostCell = document.createElement("td");
         totalCostCell.textContent = `$${order.orderAmount}`;
