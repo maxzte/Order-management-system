@@ -144,7 +144,7 @@ export async function fetchMenuData() {
             'Authorization': `Bearer ${token}`
         },
     });
-    
+
     return response.json();
 }
 
@@ -163,7 +163,6 @@ async function fetchCreateMenu() {
         return
     }
 
-    console.log('fd: ' + formData);
     const response = await fetch(MENU_ROUTE, {
         method: 'POST',
         headers: {
@@ -200,7 +199,7 @@ function addEventListenersForUpdate(menuData) {
                 document.getElementById('applyButton').onclick = async (a) => {
                     a.preventDefault();
                     const res = await fetchUpdMenu(menuElement.id);
-                    // document.querySelector('.btn-secondary').click();
+                    // console.log(res)
                     if (res) {
                         const modal = document.querySelector('.edit-modal');
                         const bsModal = bootstrap.Modal.getInstance(modal);
@@ -218,11 +217,11 @@ async function fetchUpdMenu(menuId) {
     const description = document.getElementById('message-text').value;
     const image = document.getElementById('uploadImage').files[0];
     let img;
-
     const formData = new FormData();
     formData.append('name', name);
     formData.append('description', description);
     if (image) img = image;
+    formData.append('img', img);
 
     // for (let [key, value] of formData.entries()) {
     //     console.log(`${key}: ${value}`);
@@ -234,7 +233,7 @@ async function fetchUpdMenu(menuId) {
             'Authorization': `Bearer ${token}`
         },
         body: formData,
-        files: img,
+        // files: img,
     });
 
     return response.json();

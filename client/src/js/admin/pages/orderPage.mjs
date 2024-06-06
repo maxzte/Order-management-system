@@ -240,7 +240,7 @@ function setupSortDropdown(orderData) {
             const sortStatus = e.target.getAttribute('data-sort');
             if (e.target.textContent == document.getElementById('all_orders').textContent) {
                 // orderRowsArr = [];
-                // await order();
+                await order();
             }
             else {
                 sortOrdersByStatus(sortStatus, orderData);
@@ -296,17 +296,19 @@ function editOrderHandler(orderData) {
             else if (!orderData.rows) orderElement// = Object.values(orderData).find(item => item.id == orderId);
             const detailOrder = await fetchDetailOrderInfo(orderId);
             //const res = detailOrder.order_items.find(item => item.id == orderId)
-            // console.log('res: ', res);
             console.log('Dishes: ', detailOrder);
             await getDishes(detailOrder);
-            if (orderElement) {
-                await addEventListenersForUpdate(detailOrder.userId, detailOrder);
-            }
+            console.log('detail: ', orderElement);
+            await addEventListenersForUpdate(detailOrder.userId, detailOrder);
+            // if (orderElement) {
+            //     await addEventListenersForUpdate(detailOrder.userId, detailOrder);
+            // }
         });
     });
 }
 
 async function addEventListenersForUpdate(userId, orderElement) {
+    // console.log('here we are set eventListener for apply in upd btn')
     const selectedDish = document.querySelector('.dropdown-menu.dish .selected');
     if (selectedDish) {
         const dishName = selectedDish.getAttribute('data-dish-name');
@@ -315,8 +317,8 @@ async function addEventListenersForUpdate(userId, orderElement) {
     }
     document.getElementById('applyEditButton').onclick = async (a) => {
         a.preventDefault();
-        const res = await fetchUpdOrder(userId);
-        // console.log(res)
+         await fetchUpdOrder(userId);
+         await order()
     };
 }
 
@@ -387,8 +389,8 @@ async function findUserById() {
         },
     });
     // console.log('by uID')
-    console.log(await response.json())
-    // updateOrderTable(await response.json());
+    // console.log(await response.json())
+    updateOrderTable(await response.json());
 }
 
 async function fetchDeleteOrder(orderId) {
@@ -501,7 +503,6 @@ async function updateOrderTable(sortedRows) {
             updateOrderBtn.classList.remove('hidden');
         }
     });
-    // orderRowsArr = [];
     setupSortDropdown();
     deleteOrderHandler();
     await addEventListenersForUpdStatus();
@@ -510,8 +511,6 @@ async function updateOrderTable(sortedRows) {
     dropdownHandler();
     editDropdownHandler();
     closeModalInfoHandler();
-    // console.log('sortedRows:')
-    // console.log(sortedRows)
 }
 
 function showDetailInfoModalWindow(data) {
