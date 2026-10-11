@@ -11,6 +11,10 @@ const start = async () => {
         await sequelize.authenticate();
         await sequelize.sync();
         server = app.listen(port, () => logger.info(`Server started on port: ${port}`));
+
+        // Reverse proxy and Slowloris protection timeouts
+        server.keepAliveTimeout = 65000;
+        server.headersTimeout = 66000;
     } catch (error) {
         logger.error('Failed to start server:', error);
         process.exit(1);

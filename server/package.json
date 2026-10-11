@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
+    "seed": "node scripts/seed.js",
     "test": "jest --runInBand --detectOpenHandles"
   },
   "author": "",

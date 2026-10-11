@@ -123,13 +123,13 @@ Order.belongsTo(User);
 User.hasMany(Feedback);
 Feedback.belongsTo(User);
 
-User.hasOne(Basket);
+User.hasOne(Basket, { onDelete: 'CASCADE' });
 Basket.belongsTo(User);
 
-Basket.hasMany(BasketItem);
+Basket.hasMany(BasketItem, { onDelete: 'CASCADE' });
 BasketItem.belongsTo(Basket);
 
-Dish.hasMany(BasketItem);
+Dish.hasMany(BasketItem, { onDelete: 'CASCADE' });
 BasketItem.belongsTo(Dish);
 
 Dish.hasMany(Feedback);
