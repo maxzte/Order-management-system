@@ -8,8 +8,12 @@ const router = require('./routes/index');
 const errorHandler = require('./middleware/errorHandler');
 const securityHeaders = require('./middleware/securityHeaders');
 const requestLogger = require('./middleware/requestLogger');
+const requestId = require('./middleware/requestId');
 
 const app = express();
+
+// Request ID tracing
+app.use(requestId);
 
 // Security headers & disable x-powered-by
 app.disable('x-powered-by');
