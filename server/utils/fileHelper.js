@@ -30,7 +30,33 @@ const deleteStaticFile = async (fileName) => {
     }
 };
 
+/**
+ * Safely saves an uploaded file to server/static with a unique UUID name.
+ * Validates allowed extensions.
+ * @param {object} file - The file object from req.files (express-fileupload)
+ * @param {string[]} [allowedExts=['.jpg', '.jpeg', '.png', '.webp']]
+ * @returns {Promise<string>} The generated fileName saved in static dir
+ */
+const saveStaticFile = async (file, allowedExts = ['.jpg', '.jpeg', '.png', '.webp']) => {
+    if (!file) {
+        return DEFAULT_IMAGE;
+    }
+
+    const ext = path.extname(file.name || '').toLowerCase() || '.jpg';
+    if (!allowedExts.includes(ext)) {
+        throw new Error(`Invalid file type: ${ext}. Allowed: ${allowedExts.join(', ')}`);
+    }
+
+    const { v4: uuidv4 } = require('uuid');
+    const fileName = `${uuidv4()}${ext}`;
+    const targetPath = path.resolve(STATIC_DIR, fileName);
+
+    await file.mv(targetPath);
+    return fileName;
+};
+
 module.exports = {
     deleteStaticFile,
+    saveStaticFile,
     DEFAULT_IMAGE,
 };

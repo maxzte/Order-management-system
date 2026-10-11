@@ -1,8 +1,6 @@
 const { Menu, Category, sequelize } = require('../models/models');
 const ApiError = require('../error/apiError');
-const uuid = require('uuid');
-const path = require('path');
-const { deleteStaticFile, DEFAULT_IMAGE } = require('../utils/fileHelper');
+const { deleteStaticFile, saveStaticFile, DEFAULT_IMAGE } = require('../utils/fileHelper');
 const { getPagination } = require('../utils/paginationHelper');
 
 class MenuController {
@@ -17,9 +15,7 @@ class MenuController {
 
         try {
             if (req.files && req.files.img) {
-                const img = req.files.img;
-                fileName = uuid.v4() + path.extname(img.name || '.jpg');
-                await img.mv(path.resolve(__dirname, '..', 'static', fileName));
+                fileName = await saveStaticFile(req.files.img);
             }
 
             transaction = await sequelize.transaction();
@@ -101,9 +97,7 @@ class MenuController {
             let newImage = oldImage;
 
             if (req.files && req.files.img) {
-                const img = req.files.img;
-                newImage = uuid.v4() + path.extname(img.name || '.jpg');
-                await img.mv(path.resolve(__dirname, '..', 'static', newImage));
+                newImage = await saveStaticFile(req.files.img);
             }
 
             const updateData = {};
