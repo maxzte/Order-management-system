@@ -8,6 +8,9 @@ const basketRouter = require('./basketRouter');
 const orderRouter = require('./orderRouter');
 const feedbackRouter = require('./feedbackRouter');
 const dashBoardRouter = require('./dashBoardRouter');
+const { healthCheck } = require('../controllers/healthController');
+
+router.get('/health', healthCheck);
 
 router.use('/user', userRouter)
 router.use('/menu', menuRouter)
