@@ -69,5 +69,22 @@ describe('Middleware Access Control API', () => {
             expect(res.body.database).toBe('connected');
             expect(typeof res.body.uptime).toBe('number');
         });
+
+        it('should serve Swagger UI documentation on /api/docs/', async () => {
+            const res = await request(app).get('/api/docs/');
+
+            expect(res.statusCode).toBe(200);
+            expect(res.text).toContain('Swagger UI');
+        });
+
+        it('should return structured JSON with requestId for non-existent routes (404)', async () => {
+            const res = await request(app).get('/api/unknown/non-existent-route-xyz');
+
+            expect(res.statusCode).toBe(404);
+            expect(res.body).toHaveProperty('message');
+            expect(res.body.message).toMatch(/Route not found/);
+            expect(res.body).toHaveProperty('requestId');
+            expect(res.body.requestId).toBe(res.headers['x-request-id']);
+        });
     });
 });

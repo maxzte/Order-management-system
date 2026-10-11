@@ -42,8 +42,18 @@ app.use(fileUpload({
     responseOnLimit: 'Розмір файлу перевищує ліміт 5MB',
 }));
 
+// Interactive OpenAPI / Swagger Documentation
+const { swaggerUi, swaggerDocument } = require('./docs/swagger');
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 // API Routes
 app.use('/api', router);
+
+// 404 JSON fallback for unhandled routes
+const ApiError = require('./error/apiError');
+app.use((req, res, next) => {
+    next(ApiError.notFound(`Route not found: ${req.method} ${req.originalUrl}`));
+});
 
 // Centralized error handling
 app.use(errorHandler);

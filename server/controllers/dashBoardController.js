@@ -1,7 +1,8 @@
 const { Order, User, sequelize } = require('../models/models');
-// const { User } = require('./userController');
 const Sequelize = require('sequelize');
-const moment = require('moment');
+const dayjs = require('dayjs');
+const isoWeek = require('dayjs/plugin/isoWeek');
+dayjs.extend(isoWeek);
 const Op = Sequelize.Op;
 
 class DashBoardController {
@@ -31,8 +32,8 @@ class DashBoardController {
 
         switch (period) {
             case 'Day':
-                startDate = moment(date || Date.now()).startOf('day');
-                endDate = moment(date || Date.now()).endOf('day');
+                startDate = dayjs(date || Date.now()).startOf('day');
+                endDate = dayjs(date || Date.now()).endOf('day');
                 attributes = [
                     isSqlite
                         ? [sequelize.fn('strftime', '%Y-%m-%d', sequelize.col('createdAt')), 'date']
@@ -43,8 +44,8 @@ class DashBoardController {
                 groupBy = ['date'];
                 break;
             case 'Week':
-                startDate = moment(date || Date.now()).startOf('isoWeek');
-                endDate = moment(date || Date.now()).endOf('isoWeek');
+                startDate = dayjs(date || Date.now()).startOf('isoWeek');
+                endDate = dayjs(date || Date.now()).endOf('isoWeek');
                 attributes = [
                     isSqlite
                         ? [sequelize.fn('strftime', '%Y-%W', sequelize.col('createdAt')), 'week']
@@ -55,8 +56,8 @@ class DashBoardController {
                 groupBy = ['week'];
                 break;
             case 'Month':
-                startDate = moment(date || Date.now()).startOf('month');
-                endDate = moment(date || Date.now()).endOf('month');
+                startDate = dayjs(date || Date.now()).startOf('month');
+                endDate = dayjs(date || Date.now()).endOf('month');
                 attributes = [
                     isSqlite
                         ? [sequelize.fn('strftime', '%Y-%m', sequelize.col('createdAt')), 'month']
@@ -67,8 +68,8 @@ class DashBoardController {
                 groupBy = ['month'];
                 break;
             case 'Year':
-                startDate = moment(date || Date.now()).startOf('year');
-                endDate = moment(date || Date.now()).endOf('year');
+                startDate = dayjs(date || Date.now()).startOf('year');
+                endDate = dayjs(date || Date.now()).endOf('year');
                 attributes = [
                     isSqlite
                         ? [sequelize.fn('strftime', '%Y', sequelize.col('createdAt')), 'year']
@@ -79,8 +80,8 @@ class DashBoardController {
                 groupBy = ['year'];
                 break;
             default:
-                startDate = moment(date || Date.now()).startOf('day');
-                endDate = moment(date || Date.now()).endOf('day');
+                startDate = dayjs(date || Date.now()).startOf('day');
+                endDate = dayjs(date || Date.now()).endOf('day');
                 attributes = [
                     isSqlite
                         ? [sequelize.fn('strftime', '%Y-%m-%d', sequelize.col('createdAt')), 'date']

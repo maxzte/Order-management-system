@@ -1,12 +1,11 @@
 const { Order, OrderItem, Dish, User, Basket, BasketItem, sequelize } = require('../models/models');
 const ApiError = require('../error/apiError');
 const { getPagination } = require('../utils/paginationHelper');
+const orderService = require('../services/orderService');
 
 class OrderController {
     async create(req, res, next) {
         const { userId } = req.params;
-        let transaction;
-        let orderAmount = 0;
 
         if (!Number(userId)) {
             return next(ApiError.badRequest('Invalid userId'));
@@ -17,68 +16,10 @@ class OrderController {
         }
 
         try {
-            transaction = await sequelize.transaction();
-
-            let basket = await Basket.findOne({ where: { userId }, transaction });
-            if (!basket) {
-                basket = await Basket.findOne({ where: { id: userId }, transaction });
-            }
-
-            if (!basket) {
-                await transaction.rollback();
-                return next(ApiError.notFound('Basket not found for this user'));
-            }
-
-            const basketItems = await BasketItem.findAll({
-                where: { basketId: basket.id },
-                include: [{ model: Dish }],
-                transaction
-            });
-
-            if (!basketItems || basketItems.length === 0) {
-                await transaction.rollback();
-                return next(ApiError.badRequest('Basket is empty'));
-            }
-
-            for (const item of basketItems) {
-                if (!item.dish) {
-                    await transaction.rollback();
-                    return next(ApiError.badRequest('Dish in basket no longer exists'));
-                }
-                orderAmount += item.dish.price * item.quantity;
-            }
-
-            if (orderAmount <= 0) {
-                await transaction.rollback();
-                return next(ApiError.badRequest('Total amount cannot be <= 0'));
-            }
-
-            const status = 'Обробка замовлення';
-            const order = await Order.create({
-                orderAcceptanceTime: new Date(),
-                orderAmount: parseFloat(orderAmount.toFixed(2)),
-                status,
-                userId: basket.userId || userId
-            }, { transaction });
-
-            const orderItemsData = basketItems.map(item => ({
-                price: item.dish.price,
-                amount: item.quantity,
-                orderId: order.id,
-                dishId: item.dishId
-            }));
-
-            await OrderItem.bulkCreate(orderItemsData, { transaction });
-            await BasketItem.destroy({
-                where: { basketId: basket.id },
-                transaction
-            });
-
-            await transaction.commit();
+            const order = await orderService.createOrderFromBasket(userId);
             return res.json({ order });
         } catch (e) {
-            if (transaction) await transaction.rollback();
-            return next(ApiError.internal('Something went wrong: ' + e.message));
+            return next(e);
         }
     }
 

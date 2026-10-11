@@ -1,71 +1,32 @@
 const { User, Basket, sequelize } = require('../models/models');
 const ApiError = require('../error/apiError');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-
-const generateJwt = (id, email, role) => {
-    return jwt.sign(
-        { id, email, role },
-        process.env.SECRET_KEY,
-        { expiresIn: '24h' }
-    );
-};
+const authService = require('../services/authService');
+const { getPagination } = require('../utils/paginationHelper');
 
 class UserController {
     async reg(req, res, next) {
-        let transaction;
         try {
-            const { email, password, name, role } = req.body;
-            if (!email || !password) {
-                return next(ApiError.badRequest('Email and password are required!'));
-            }
-
-            const candidate = await User.findOne({ where: { email } });
-            if (candidate) {
-                return next(ApiError.badRequest('User with this email already exists!'));
-            }
-
-            transaction = await sequelize.transaction();
-            const hashPassword = await bcrypt.hash(password, 10);
-            const user = await User.create({ name: name || '', email, password: hashPassword, role: 'USER' }, { transaction });
-            await Basket.create({ userId: user.id }, { transaction });
-            await transaction.commit();
-
-            const token = generateJwt(user.id, user.email, user.role);
-            return res.json({ token, id: user.id, role: user.role });
+            const { email, password, name } = req.body;
+            const result = await authService.register({ email, password, name });
+            return res.json(result);
         } catch (e) {
-            if (transaction) await transaction.rollback();
-            return next(ApiError.internal('Registration error: ' + e.message));
+            return next(e);
         }
     }
 
     async login(req, res, next) {
         try {
             const { email, password } = req.body;
-            if (!email || !password) {
-                return next(ApiError.badRequest('Email and password are required!'));
-            }
-
-            const user = await User.findOne({ where: { email } });
-            if (!user) {
-                return next(ApiError.badRequest('User not found!'));
-            }
-
-            const comparePassword = bcrypt.compareSync(password, user.password);
-            if (!comparePassword) {
-                return next(ApiError.badRequest('Wrong password!'));
-            }
-
-            const token = generateJwt(user.id, user.email, user.role);
-            return res.json({ token, id: user.id, role: user.role });
+            const result = await authService.login({ email, password });
+            return res.json(result);
         } catch (e) {
-            return next(ApiError.internal('Login error: ' + e.message));
+            return next(e);
         }
     }
 
     async authCheck(req, res, next) {
         try {
-            const token = generateJwt(req.user.id, req.user.email, req.user.role);
+            const token = authService.generateToken(req.user.id, req.user.email, req.user.role);
             return res.json({ token, id: req.user.id, role: req.user.role });
         } catch (e) {
             return next(ApiError.internal(e.message));
