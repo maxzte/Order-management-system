@@ -10,6 +10,11 @@ class FeedbackController {
             return next(ApiError.badRequest('Invalid input data!'));
         }
 
+        // Ownership check: user can only leave feedback for themselves, or admin
+        if (req.user && req.user.role !== 'ADMIN' && String(req.user.id) !== String(userId)) {
+            return next(ApiError.forbidden('Forbidden: You can only create feedback for your own account'));
+        }
+
         try {
             const user = await User.findByPk(userId);
             if (!user) {
@@ -81,6 +86,11 @@ class FeedbackController {
             return next(ApiError.badRequest('Invalid input data!'));
         }
 
+        // Ownership check
+        if (req.user && req.user.role !== 'ADMIN' && String(req.user.id) !== String(userId)) {
+            return next(ApiError.forbidden('Forbidden: You can only update your own feedback'));
+        }
+
         try {
             transaction = await sequelize.transaction();
             const feedback = await Feedback.findOne({
@@ -121,6 +131,11 @@ class FeedbackController {
 
         if (!Number(userId) || !Number(dishId)) {
             return next(ApiError.badRequest('Invalid parameters!'));
+        }
+
+        // Ownership check
+        if (req.user && req.user.role !== 'ADMIN' && String(req.user.id) !== String(userId)) {
+            return next(ApiError.forbidden('Forbidden: You can only delete your own feedback'));
         }
 
         try {

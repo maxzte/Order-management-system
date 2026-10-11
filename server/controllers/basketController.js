@@ -11,6 +11,10 @@ class BasketController {
                 return next(ApiError.badRequest('Invalid user id'));
             }
 
+            if (req.user && req.user.role !== 'ADMIN' && String(req.user.id) !== String(userId)) {
+                return next(ApiError.forbidden('Forbidden: Cannot modify basket of another user'));
+            }
+
             transaction = await sequelize.transaction();
             const [basket] = await Basket.findOrCreate({
                 where: { userId },
@@ -34,6 +38,10 @@ class BasketController {
         const numQuantity = Number(quantity);
         if (!Number(userId) || !Number(dishId) || !numQuantity || numQuantity <= 0) {
             return next(ApiError.badRequest('Invalid input data'));
+        }
+
+        if (req.user && req.user.role !== 'ADMIN' && String(req.user.id) !== String(userId)) {
+            return next(ApiError.forbidden('Forbidden: Cannot add item to basket of another user'));
         }
 
         try {
@@ -97,6 +105,10 @@ class BasketController {
 
             if (!basket) {
                 return next(ApiError.notFound('Basket not found'));
+            }
+
+            if (req.user && req.user.role !== 'ADMIN' && String(req.user.id) !== String(basket.userId)) {
+                return next(ApiError.forbidden('Forbidden: Cannot view basket of another user'));
             }
 
             if (dir) {

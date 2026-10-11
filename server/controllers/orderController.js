@@ -12,6 +12,10 @@ class OrderController {
             return next(ApiError.badRequest('Invalid userId'));
         }
 
+        if (req.user && req.user.role !== 'ADMIN' && String(req.user.id) !== String(userId)) {
+            return next(ApiError.forbidden('Forbidden: Cannot create order for another user'));
+        }
+
         try {
             transaction = await sequelize.transaction();
 
@@ -104,6 +108,10 @@ class OrderController {
             return next(ApiError.badRequest('Invalid id'));
         }
 
+        if (req.user && req.user.role !== 'ADMIN' && String(req.user.id) !== String(id)) {
+            return next(ApiError.forbidden('Forbidden: Cannot view orders of another user'));
+        }
+
         if (dir) {
             order.push(['createdAt', dir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC']);
         } else {
@@ -165,6 +173,10 @@ class OrderController {
 
             if (!order) {
                 return next(ApiError.notFound('Order not found'));
+            }
+
+            if (req.user && req.user.role !== 'ADMIN' && String(req.user.id) !== String(order.userId)) {
+                return next(ApiError.forbidden('Forbidden: Cannot view order of another user'));
             }
 
             return res.json(order);
