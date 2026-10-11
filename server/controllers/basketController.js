@@ -138,8 +138,14 @@ class BasketController {
 
     async deleteAllItemsFromBasket(req, res, next) {
         try {
-            const { BasketItem } = require('../models/models');
+            const basketId = req.body?.basketId || (req.user ? req.user.id : null);
+            if (basketId) {
+                const result = await basketService.clearBasket(basketId);
+                return res.json(result);
+            }
+            const { Basket, BasketItem } = require('../models/models');
             await BasketItem.destroy({ where: {} });
+            await Basket.update({ totalAmount: 0 }, { where: {} });
             return res.json({ message: 'Items deleted!' });
         } catch (error) {
             return next(ApiError.internal('Internal server error: ' + error.message));

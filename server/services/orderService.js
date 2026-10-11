@@ -25,7 +25,7 @@ class OrderService {
 
             const basketItems = await BasketItem.findAll({
                 where: { basketId: basket.id },
-                include: [{ model: Dish }],
+                include: [{ model: Dish, paranoid: false }],
                 transaction
             });
 
@@ -36,7 +36,7 @@ class OrderService {
 
             let orderAmount = 0;
             for (const item of basketItems) {
-                if (!item.dish) {
+                if (!item.dish || item.dish.deletedAt) {
                     await transaction.rollback();
                     throw ApiError.badRequest('Dish in basket no longer exists');
                 }
