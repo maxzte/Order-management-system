@@ -8,6 +8,8 @@ const User = sequelize.define('user', {
     password: { type: DataTypes.STRING, allowNull: false },
     role: { type: DataTypes.STRING, defaultValue: 'USER' },
 }, {
+    paranoid: true,
+    timestamps: true,
     indexes: [
         { unique: true, fields: ['email'] }
     ]
@@ -19,6 +21,8 @@ const Order = sequelize.define('order', {
     orderAmount: { type: DataTypes.DOUBLE, defaultValue: 0, allowNull: false },
     status: { type: DataTypes.STRING, allowNull: false },
 }, {
+    paranoid: true,
+    timestamps: true,
     indexes: [
         { fields: ['userId'] },
         { fields: ['status'] },
@@ -31,6 +35,7 @@ const OrderItem = sequelize.define('order_item', {
     price: { type: DataTypes.DOUBLE, allowNull: false },
     amount: { type: DataTypes.DOUBLE, defaultValue: 1, allowNull: false },
 }, {
+    timestamps: true,
     indexes: [
         { fields: ['orderId'] },
         { fields: ['dishId'] }
@@ -45,6 +50,8 @@ const Dish = sequelize.define('dish', {
     rating: { type: DataTypes.INTEGER, defaultValue: 0 },
     img: { type: DataTypes.STRING, allowNull: false, defaultValue: '' },
 }, {
+    paranoid: true,
+    timestamps: true,
     indexes: [
         { fields: ['categoryId'] },
         { fields: ['price'] },
@@ -58,6 +65,8 @@ const Category = sequelize.define('category', {
     description: { type: DataTypes.STRING, allowNull: false },
     img: { type: DataTypes.STRING, allowNull: false, defaultValue: '' },
 }, {
+    paranoid: true,
+    timestamps: true,
     indexes: [
         { fields: ['menuId'] }
     ]
@@ -68,6 +77,8 @@ const Feedback = sequelize.define('feedback', {
     text: { type: DataTypes.STRING, defaultValue: '', allowNull: false },
     dateTime: { type: DataTypes.TIME },
 }, {
+    paranoid: true,
+    timestamps: true,
     indexes: [
         { fields: ['userId'] },
         { fields: ['dishId'] }
@@ -79,12 +90,16 @@ const Menu = sequelize.define('menu', {
     name: { type: DataTypes.STRING, unique: true, allowNull: false },
     description: { type: DataTypes.STRING, defaultValue: '', allowNull: false },
     img: { type: DataTypes.STRING, defaultValue: '', allowNull: false },
+}, {
+    paranoid: true,
+    timestamps: true,
 });
 
 const Basket = sequelize.define('basket', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     totalAmount: { type: DataTypes.DOUBLE, defaultValue: 0, allowNull: false },
 }, {
+    timestamps: true,
     indexes: [
         { fields: ['userId'] }
     ]
@@ -94,6 +109,7 @@ const BasketItem = sequelize.define('basket_item', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     quantity: { type: DataTypes.INTEGER, defaultValue: 1, allowNull: false },
 }, {
+    timestamps: true,
     indexes: [
         { fields: ['basketId'] },
         { fields: ['dishId'] }

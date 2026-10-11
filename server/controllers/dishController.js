@@ -160,12 +160,8 @@ class DishController {
                 return next(ApiError.notFound('Dish not found'));
             }
 
-            const imageToDelete = dish.img;
             await dish.destroy({ transaction });
             await transaction.commit();
-
-            // Clean up file from disk
-            await deleteStaticFile(imageToDelete);
 
             return res.json({ message: 'Dish deleted successfully' });
         } catch (e) {

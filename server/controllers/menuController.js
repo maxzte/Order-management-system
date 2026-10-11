@@ -139,11 +139,8 @@ class MenuController {
                 return next(ApiError.notFound('Menu not found'));
             }
 
-            const imageToDelete = menu.img;
             await menu.destroy({ transaction });
             await transaction.commit();
-
-            await deleteStaticFile(imageToDelete);
 
             return res.json({ message: 'Menu deleted successfully' });
         } catch (e) {

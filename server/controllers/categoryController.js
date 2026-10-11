@@ -149,11 +149,8 @@ class CategoryController {
                 return next(ApiError.notFound('Category not found'));
             }
 
-            const imageToDelete = category.img;
             await category.destroy({ transaction });
             await transaction.commit();
-
-            await deleteStaticFile(imageToDelete);
 
             return res.json({ message: 'Category deleted successfully' });
         } catch (e) {

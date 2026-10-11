@@ -273,7 +273,6 @@ class OrderController {
                 return next(ApiError.notFound('Order not found'));
             }
 
-            await OrderItem.destroy({ where: { orderId: order.id }, transaction });
             await order.destroy({ transaction });
             await transaction.commit();
 
