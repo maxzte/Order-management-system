@@ -2,11 +2,12 @@ const { Menu, Category, sequelize } = require('../models/models');
 const ApiError = require('../error/apiError');
 const uuid = require('uuid');
 const path = require('path');
+const { deleteStaticFile, DEFAULT_IMAGE } = require('../utils/fileHelper');
 
 class MenuController {
     async create(req, res, next) {
         let { name, description } = req.body;
-        let fileName = '';
+        let fileName = DEFAULT_IMAGE;
         let transaction;
 
         if (!name) {
@@ -31,6 +32,7 @@ class MenuController {
             return res.json({ menu });
         } catch (e) {
             if (transaction) await transaction.rollback();
+            if (fileName !== DEFAULT_IMAGE) await deleteStaticFile(fileName);
             return next(ApiError.internal('Failed to create menu: ' + e.message));
         }
     }
@@ -96,20 +98,26 @@ class MenuController {
                 return next(ApiError.notFound('Menu not found!'));
             }
 
-            let fileName = existingMenu.img;
+            const oldImage = existingMenu.img;
+            let newImage = oldImage;
+
             if (req.files && req.files.img) {
                 const img = req.files.img;
-                fileName = uuid.v4() + path.extname(img.name || '.jpg');
-                await img.mv(path.resolve(__dirname, '..', 'static', fileName));
+                newImage = uuid.v4() + path.extname(img.name || '.jpg');
+                await img.mv(path.resolve(__dirname, '..', 'static', newImage));
             }
 
             const updateData = {};
             if (name !== undefined) updateData.name = name;
             if (description !== undefined) updateData.description = description;
-            if (fileName !== undefined) updateData.img = fileName;
+            if (newImage !== undefined) updateData.img = newImage;
 
             await existingMenu.update(updateData, { transaction });
             await transaction.commit();
+
+            if (newImage !== oldImage) {
+                await deleteStaticFile(oldImage);
+            }
 
             const updatedMenu = await Menu.findByPk(id, {
                 include: [{ model: Category }]
@@ -138,8 +146,11 @@ class MenuController {
                 return next(ApiError.notFound('Menu not found'));
             }
 
+            const imageToDelete = menu.img;
             await menu.destroy({ transaction });
             await transaction.commit();
+
+            await deleteStaticFile(imageToDelete);
 
             return res.json({ message: 'Menu deleted successfully' });
         } catch (e) {

@@ -2,11 +2,12 @@ const { Category, Dish, Menu, sequelize } = require('../models/models');
 const ApiError = require('../error/apiError');
 const uuid = require('uuid');
 const path = require('path');
+const { deleteStaticFile, DEFAULT_IMAGE } = require('../utils/fileHelper');
 
 class CategoryController {
     async create(req, res, next) {
         let { name, menuId, description } = req.body;
-        let fileName = '';
+        let fileName = DEFAULT_IMAGE;
         let transaction;
 
         if (!name || !menuId) {
@@ -32,6 +33,7 @@ class CategoryController {
             return res.json({ category });
         } catch (e) {
             if (transaction) await transaction.rollback();
+            if (fileName !== DEFAULT_IMAGE) await deleteStaticFile(fileName);
             return next(ApiError.internal('Failed to create category: ' + e.message));
         }
     }
@@ -110,21 +112,27 @@ class CategoryController {
                 return next(ApiError.notFound('Category not found!'));
             }
 
-            let fileName = existingCategory.img;
+            const oldImage = existingCategory.img;
+            let newImage = oldImage;
+
             if (req.files && req.files.img) {
                 const img = req.files.img;
-                fileName = uuid.v4() + path.extname(img.name || '.jpg');
-                await img.mv(path.resolve(__dirname, '..', 'static', fileName));
+                newImage = uuid.v4() + path.extname(img.name || '.jpg');
+                await img.mv(path.resolve(__dirname, '..', 'static', newImage));
             }
 
             const updateData = {};
             if (name !== undefined) updateData.name = name;
             if (menuId !== undefined) updateData.menuId = menuId;
             if (description !== undefined) updateData.description = description;
-            if (fileName !== undefined) updateData.img = fileName;
+            if (newImage !== undefined) updateData.img = newImage;
 
             await existingCategory.update(updateData, { transaction });
             await transaction.commit();
+
+            if (newImage !== oldImage) {
+                await deleteStaticFile(oldImage);
+            }
 
             const updatedCategory = await Category.findByPk(id, { include: [{ model: Menu }] });
             return res.json(updatedCategory);
@@ -150,8 +158,11 @@ class CategoryController {
                 return next(ApiError.notFound('Category not found'));
             }
 
+            const imageToDelete = category.img;
             await category.destroy({ transaction });
             await transaction.commit();
+
+            await deleteStaticFile(imageToDelete);
 
             return res.json({ message: 'Category deleted successfully' });
         } catch (e) {

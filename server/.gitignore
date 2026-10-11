@@ -24,3 +24,8 @@ coverage/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# User uploaded static files (keep directory, .gitkeep and default placeholder)
+static/*
+!static/.gitkeep
+!static/default.png

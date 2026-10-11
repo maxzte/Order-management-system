@@ -2,11 +2,12 @@ const { Dish, sequelize, Category } = require('../models/models');
 const ApiError = require('../error/apiError');
 const uuid = require('uuid');
 const path = require('path');
+const { deleteStaticFile, DEFAULT_IMAGE } = require('../utils/fileHelper');
 
 class DishController {
     async create(req, res, next) {
         let { name, price, description, rating, categoryId } = req.body;
-        let fileName = '';
+        let fileName = DEFAULT_IMAGE;
         let transaction;
 
         if (!name || !price || !categoryId) {
@@ -39,6 +40,7 @@ class DishController {
             return res.json({ dish });
         } catch (e) {
             if (transaction) await transaction.rollback();
+            if (fileName !== DEFAULT_IMAGE) await deleteStaticFile(fileName);
             return next(ApiError.internal('Failed to create dish: ' + e.message));
         }
     }
@@ -107,11 +109,13 @@ class DishController {
                 return next(ApiError.notFound('Dish not found!'));
             }
 
-            let fileName = existingDish.img;
+            const oldImage = existingDish.img;
+            let newImage = oldImage;
+
             if (req.files && req.files.img) {
                 const img = req.files.img;
-                fileName = uuid.v4() + path.extname(img.name || '.jpg');
-                await img.mv(path.resolve(__dirname, '..', 'static', fileName));
+                newImage = uuid.v4() + path.extname(img.name || '.jpg');
+                await img.mv(path.resolve(__dirname, '..', 'static', newImage));
             }
 
             const updateData = {};
@@ -119,12 +123,13 @@ class DishController {
             if (description !== undefined) updateData.description = description;
             if (rating !== undefined) updateData.rating = rating;
             if (categoryId !== undefined) updateData.categoryId = categoryId;
-            if (fileName !== undefined) updateData.img = fileName;
+            if (newImage !== undefined) updateData.img = newImage;
 
             if (price !== undefined) {
                 const numPrice = Number(price);
                 if (isNaN(numPrice) || numPrice <= 0) {
                     await transaction.rollback();
+                    if (newImage !== oldImage) await deleteStaticFile(newImage);
                     return next(ApiError.badRequest('Price must be greater than 0'));
                 }
                 updateData.price = numPrice;
@@ -132,6 +137,11 @@ class DishController {
 
             await existingDish.update(updateData, { transaction });
             await transaction.commit();
+
+            // Clean up old image if replaced
+            if (newImage !== oldImage) {
+                await deleteStaticFile(oldImage);
+            }
 
             const updated = await Dish.findByPk(id, { include: [{ model: Category }] });
             return res.json(updated);
@@ -157,8 +167,12 @@ class DishController {
                 return next(ApiError.notFound('Dish not found'));
             }
 
+            const imageToDelete = dish.img;
             await dish.destroy({ transaction });
             await transaction.commit();
+
+            // Clean up file from disk
+            await deleteStaticFile(imageToDelete);
 
             return res.json({ message: 'Dish deleted successfully' });
         } catch (e) {
