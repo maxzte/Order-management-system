@@ -2,6 +2,7 @@ const { Dish, Category, sequelize } = require('../models/models');
 const ApiError = require('../error/apiError');
 const { saveStaticFile, DEFAULT_IMAGE } = require('../utils/fileHelper');
 const { getPagination } = require('../utils/paginationHelper');
+const cacheService = require('./cacheService');
 
 class DishService {
     /**
@@ -34,6 +35,11 @@ class DishService {
             }, { transaction });
 
             await transaction.commit();
+
+            // Invalidate dishes cache
+            await cacheService.del('dishes:*');
+            await cacheService.del('categories:*');
+
             return dish;
         } catch (error) {
             if (transaction && !transaction.finished) {
@@ -47,6 +53,12 @@ class DishService {
      * Fetches paginated dishes with sorting.
      */
     async getAllDishes({ sort, dir, limit, page }) {
+        const cacheKey = `dishes:all:${sort || 'default'}:${dir || 'asc'}:${page || 1}:${limit || 10}`;
+        const cached = await cacheService.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
+
         const { limit: queryLimit, offset } = getPagination(page, limit);
 
         let order = [];
@@ -58,12 +70,16 @@ class DishService {
             order.push(['id', 'ASC']);
         }
 
-        return await Dish.findAndCountAll({
+        const dishes = await Dish.findAndCountAll({
             order,
             limit: queryLimit,
             offset,
             include: [{ model: Category }]
         });
+
+        // Cache for 15 minutes
+        await cacheService.set(cacheKey, dishes, 900);
+        return dishes;
     }
 
     /**
@@ -72,6 +88,12 @@ class DishService {
     async getDishById(id) {
         if (!Number(id)) {
             throw ApiError.badRequest('Invalid ID');
+        }
+
+        const cacheKey = `dishes:item:${id}`;
+        const cached = await cacheService.get(cacheKey);
+        if (cached) {
+            return cached;
         }
 
         const dish = await Dish.findOne({
@@ -83,6 +105,7 @@ class DishService {
             throw ApiError.notFound('Dish not found');
         }
 
+        await cacheService.set(cacheKey, dish, 900);
         return dish;
     }
 
@@ -126,6 +149,10 @@ class DishService {
             await existingDish.update(updateData, { transaction });
             await transaction.commit();
 
+            // Invalidate cache
+            await cacheService.del('dishes:*');
+            await cacheService.del('categories:*');
+
             return await Dish.findByPk(id, { include: [{ model: Category }] });
         } catch (error) {
             if (transaction && !transaction.finished) {
@@ -149,6 +176,11 @@ class DishService {
         }
 
         await dish.destroy();
+
+        // Invalidate cache
+        await cacheService.del('dishes:*');
+        await cacheService.del('categories:*');
+
         return { message: 'Dish deleted successfully' };
     }
 }

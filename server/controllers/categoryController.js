@@ -1,161 +1,48 @@
-const { Category, Dish, Menu, sequelize } = require('../models/models');
-const ApiError = require('../error/apiError');
-const { deleteStaticFile, saveStaticFile, DEFAULT_IMAGE } = require('../utils/fileHelper');
-const { getPagination } = require('../utils/paginationHelper');
+const categoryService = require('../services/categoryService');
 
 class CategoryController {
     async create(req, res, next) {
-        let { name, menuId, description } = req.body;
-        let fileName = DEFAULT_IMAGE;
-        let transaction;
-
-        if (!name || !menuId) {
-            return next(ApiError.badRequest('Name and menuId are required!'));
-        }
-
         try {
-            if (req.files && req.files.img) {
-                fileName = await saveStaticFile(req.files.img);
-            }
-
-            transaction = await sequelize.transaction();
-            const category = await Category.create({
-                name,
-                menuId,
-                description: description || '',
-                img: fileName
-            }, { transaction });
-
-            await transaction.commit();
+            const category = await categoryService.createCategory(req.body, req.files?.img);
             return res.json({ category });
         } catch (e) {
-            if (transaction) await transaction.rollback();
-            if (fileName !== DEFAULT_IMAGE) await deleteStaticFile(fileName);
-            return next(ApiError.internal('Failed to create category: ' + e.message));
+            return next(e);
         }
     }
 
     async getAll(req, res, next) {
         try {
-            const { limit, page } = req.query;
-            const { limit: queryLimit, offset } = getPagination(page, limit);
-
-            const categories = await Category.findAndCountAll({
-                limit: queryLimit,
-                offset,
-                include: [{ model: Menu }]
-            });
-
+            const categories = await categoryService.getAllCategories(req.query);
             return res.json(categories);
         } catch (e) {
-            return next(ApiError.internal(e.message));
+            return next(e);
         }
     }
 
     async getOne(req, res, next) {
-        const { id } = req.params;
-        const { sort, dir, limit, page } = req.query;
-        const { limit: queryLimit, offset } = getPagination(page, limit);
-
-        if (!Number(id)) {
-            return next(ApiError.badRequest('Invalid ID'));
-        }
-
         try {
-            const category = await Category.findOne({ where: { id } });
-            if (!category) {
-                return next(ApiError.notFound('Category not found'));
-            }
-
-            let order = [];
-            if (sort) order.push([sort, dir?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC']);
-
-            const dishes = await Dish.findAndCountAll({
-                where: { categoryId: id },
-                order,
-                limit: queryLimit,
-                offset,
-                attributes: ['id', 'name', 'price', 'description', 'rating', 'img'],
-            });
-
-            return res.json({
-                category,
-                dishes: dishes.rows,
-                count: dishes.count
-            });
+            const result = await categoryService.getCategoryById(req.params.id, req.query);
+            return res.json(result);
         } catch (e) {
-            return next(ApiError.internal(e.message));
+            return next(e);
         }
     }
 
     async updateCategory(req, res, next) {
-        const { id } = req.params;
-        const { name, menuId, description } = req.body;
-        let transaction;
-
-        if (!Number(id)) {
-            return next(ApiError.badRequest('Invalid ID'));
-        }
-
         try {
-            transaction = await sequelize.transaction();
-            const existingCategory = await Category.findByPk(id, { transaction });
-            if (!existingCategory) {
-                await transaction.rollback();
-                return next(ApiError.notFound('Category not found!'));
-            }
-
-            const oldImage = existingCategory.img;
-            let newImage = oldImage;
-
-            if (req.files && req.files.img) {
-                newImage = await saveStaticFile(req.files.img);
-            }
-
-            const updateData = {};
-            if (name !== undefined) updateData.name = name;
-            if (menuId !== undefined) updateData.menuId = menuId;
-            if (description !== undefined) updateData.description = description;
-            if (newImage !== undefined) updateData.img = newImage;
-
-            await existingCategory.update(updateData, { transaction });
-            await transaction.commit();
-
-            if (newImage !== oldImage) {
-                await deleteStaticFile(oldImage);
-            }
-
-            const updatedCategory = await Category.findByPk(id, { include: [{ model: Menu }] });
-            return res.json(updatedCategory);
+            const updated = await categoryService.updateCategory(req.params.id, req.body, req.files?.img);
+            return res.json(updated);
         } catch (e) {
-            if (transaction) await transaction.rollback();
-            return next(ApiError.internal('Failed to update category: ' + e.message));
+            return next(e);
         }
     }
 
     async deleteOne(req, res, next) {
-        const { id } = req.params;
-        let transaction;
-
-        if (!Number(id)) {
-            return next(ApiError.badRequest('Invalid ID'));
-        }
-
         try {
-            transaction = await sequelize.transaction();
-            const category = await Category.findOne({ where: { id }, transaction });
-            if (!category) {
-                await transaction.rollback();
-                return next(ApiError.notFound('Category not found'));
-            }
-
-            await category.destroy({ transaction });
-            await transaction.commit();
-
-            return res.json({ message: 'Category deleted successfully' });
+            const result = await categoryService.deleteCategory(req.params.id);
+            return res.json(result);
         } catch (e) {
-            if (transaction) await transaction.rollback();
-            return next(ApiError.internal('Error deleting category: ' + e.message));
+            return next(e);
         }
     }
 }
