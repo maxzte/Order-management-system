@@ -27,56 +27,68 @@ class DashBoardController {
     async getDataForChart(req, res) {
         const { date, period } = req.query;
         let startDate, endDate, attributes, groupBy;
+        const isSqlite = sequelize.getDialect() === 'sqlite';
+
         switch (period) {
             case 'Day':
                 startDate = moment(date || Date.now()).startOf('day');
                 endDate = moment(date || Date.now()).endOf('day');
                 attributes = [
-                    [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d'), 'date'],
-                    [sequelize.fn('COUNT', '*'), 'count'],
-                    [sequelize.col('createdAt'), 'createdAt'],
+                    isSqlite
+                        ? [sequelize.fn('strftime', '%Y-%m-%d', sequelize.col('createdAt')), 'date']
+                        : [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d'), 'date'],
+                    [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+                    [sequelize.fn('MIN', sequelize.col('createdAt')), 'createdAt'],
                 ];
-                groupBy = ['date', 'createdAt'];
+                groupBy = ['date'];
                 break;
             case 'Week':
                 startDate = moment(date || Date.now()).startOf('isoWeek');
                 endDate = moment(date || Date.now()).endOf('isoWeek');
                 attributes = [
-                    [sequelize.fn('YEARWEEK', sequelize.col('createdAt'), 1), 'week'],
-                    [sequelize.fn('COUNT', '*'), 'count'],
-                    [sequelize.col('createdAt'), 'createdAt'],
+                    isSqlite
+                        ? [sequelize.fn('strftime', '%Y-%W', sequelize.col('createdAt')), 'week']
+                        : [sequelize.fn('YEARWEEK', sequelize.col('createdAt'), 1), 'week'],
+                    [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+                    [sequelize.fn('MIN', sequelize.col('createdAt')), 'createdAt'],
                 ];
-                groupBy = ['week', 'createdAt'];
+                groupBy = ['week'];
                 break;
             case 'Month':
                 startDate = moment(date || Date.now()).startOf('month');
                 endDate = moment(date || Date.now()).endOf('month');
                 attributes = [
-                    [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m'), 'month'],
-                    [sequelize.fn('COUNT', '*'), 'count'],
-                    [sequelize.col('createdAt'), 'createdAt'],
+                    isSqlite
+                        ? [sequelize.fn('strftime', '%Y-%m', sequelize.col('createdAt')), 'month']
+                        : [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m'), 'month'],
+                    [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+                    [sequelize.fn('MIN', sequelize.col('createdAt')), 'createdAt'],
                 ];
-                groupBy = ['month', 'createdAt'];
+                groupBy = ['month'];
                 break;
             case 'Year':
                 startDate = moment(date || Date.now()).startOf('year');
                 endDate = moment(date || Date.now()).endOf('year');
                 attributes = [
-                    [sequelize.fn('YEAR', sequelize.col('createdAt')), 'year'],
-                    [sequelize.fn('COUNT', 1), 'count'],
-                    [sequelize.col('createdAt'), 'createdAt'],
+                    isSqlite
+                        ? [sequelize.fn('strftime', '%Y', sequelize.col('createdAt')), 'year']
+                        : [sequelize.fn('YEAR', sequelize.col('createdAt')), 'year'],
+                    [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+                    [sequelize.fn('MIN', sequelize.col('createdAt')), 'createdAt'],
                 ];
-                groupBy = ['year', 'createdAt'];
+                groupBy = ['year'];
                 break;
             default:
-                startDate = moment(date).startOf('day');
-                endDate = moment(date).endOf('day');
+                startDate = moment(date || Date.now()).startOf('day');
+                endDate = moment(date || Date.now()).endOf('day');
                 attributes = [
-                    [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d'), 'date'],
-                    [sequelize.fn('COUNT', '*'), 'count'],
-                    [sequelize.col('createdAt'), 'createdAt'],
+                    isSqlite
+                        ? [sequelize.fn('strftime', '%Y-%m-%d', sequelize.col('createdAt')), 'date']
+                        : [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d'), 'date'],
+                    [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+                    [sequelize.fn('MIN', sequelize.col('createdAt')), 'createdAt'],
                 ];
-                groupBy = ['date', 'createdAt'];
+                groupBy = ['date'];
                 break;
         }
         try {
@@ -84,10 +96,8 @@ class DashBoardController {
                 attributes,
                 where: {
                     createdAt: {
-                        [Op.between]: [startDate, endDate]
-                        // [Op.like]: `${date}%`
+                        [Op.between]: [startDate.toDate(), endDate.toDate()]
                     },
-                    // status: 'Оплачено'
                 },
                 group: groupBy,
                 order: [[groupBy[0], 'ASC']],
@@ -95,7 +105,7 @@ class DashBoardController {
 
             return res.json(salesData);
         } catch (e) {
-            return res.status(500).json({ message: 'Error retrieving sales data: ' + e });
+            return res.status(500).json({ message: 'Error retrieving sales data: ' + e.message });
         }
     }
 }
