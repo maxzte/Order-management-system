@@ -40,6 +40,20 @@ describe('User Authentication API', () => {
         expect(basket).not.toBeNull();
     });
 
+    it('should ignore client-supplied role: ADMIN and assign USER', async () => {
+        const res = await request(app)
+            .post('/api/user/reg')
+            .send({
+                name: 'Hacker',
+                email: 'hacker@example.com',
+                password: 'password123',
+                role: 'ADMIN'
+            });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.role).toBe('USER');
+    });
+
     it('should fail registration with duplicate email (400)', async () => {
         const res = await request(app)
             .post('/api/user/reg')

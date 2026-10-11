@@ -3,6 +3,7 @@ const ApiError = require('../error/apiError');
 const uuid = require('uuid');
 const path = require('path');
 const { deleteStaticFile, DEFAULT_IMAGE } = require('../utils/fileHelper');
+const { getPagination } = require('../utils/paginationHelper');
 
 class DishController {
     async create(req, res, next) {
@@ -47,10 +48,8 @@ class DishController {
 
     async getAll(req, res, next) {
         try {
-            let { sort, dir, limit, page } = req.query;
-            page = parseInt(page) || 1;
-            limit = parseInt(limit) || 9;
-            let offset = page * limit - limit;
+            const { sort, dir, limit, page } = req.query;
+            const { limit: queryLimit, offset } = getPagination(page, limit);
 
             let order = [];
             if (sort === 'price') order.push(['price', dir?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC']);
@@ -59,7 +58,7 @@ class DishController {
 
             const dishes = await Dish.findAndCountAll({
                 order,
-                limit,
+                limit: queryLimit,
                 offset,
                 include: [{ model: Category }]
             });

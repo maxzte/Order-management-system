@@ -1,5 +1,6 @@
 const { Basket, BasketItem, Dish, sequelize } = require('../models/models');
 const ApiError = require('../error/apiError');
+const { getPagination } = require('../utils/paginationHelper');
 
 class BasketController {
     async create(req, res, next) {
@@ -80,10 +81,8 @@ class BasketController {
     // Supports passing either basket.id or userId (fallback to match client index.html?id=userId)
     async getAllItemsFromBasket(req, res, next) {
         const { id } = req.params;
-        let { dir, limit, page } = req.query;
-        page = parseInt(page) || 1;
-        limit = parseInt(limit) || 9;
-        let offset = page * limit - limit;
+        const { dir, limit, page } = req.query;
+        const { limit: queryLimit, offset } = getPagination(page, limit);
         let order = [];
 
         if (!Number(id)) {
@@ -107,7 +106,7 @@ class BasketController {
             const basketItems = await BasketItem.findAndCountAll({
                 where: { basketId: basket.id },
                 order,
-                limit,
+                limit: queryLimit,
                 offset,
                 include: [{
                     model: Dish

@@ -3,6 +3,7 @@ const ApiError = require('../error/apiError');
 const uuid = require('uuid');
 const path = require('path');
 const { deleteStaticFile, DEFAULT_IMAGE } = require('../utils/fileHelper');
+const { getPagination } = require('../utils/paginationHelper');
 
 class MenuController {
     async create(req, res, next) {
@@ -39,13 +40,11 @@ class MenuController {
 
     async getAll(req, res, next) {
         try {
-            let { limit, page } = req.query;
-            page = parseInt(page) || 1;
-            limit = parseInt(limit) || 9;
-            let offset = page * limit - limit;
+            const { limit, page } = req.query;
+            const { limit: queryLimit, offset } = getPagination(page, limit);
 
             const menus = await Menu.findAndCountAll({
-                limit,
+                limit: queryLimit,
                 offset,
                 include: [{ model: Category, attributes: ['id', 'name'] }]
             });

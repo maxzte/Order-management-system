@@ -1,5 +1,6 @@
 const { Order, OrderItem, Dish, User, Basket, BasketItem, sequelize } = require('../models/models');
 const ApiError = require('../error/apiError');
+const { getPagination } = require('../utils/paginationHelper');
 
 class OrderController {
     async create(req, res, next) {
@@ -56,21 +57,18 @@ class OrderController {
                 userId: basket.userId || userId
             }, { transaction });
 
-            for (const item of basketItems) {
-                await OrderItem.create({
-                    price: item.dish.price,
-                    amount: item.quantity,
-                    orderId: order.id,
-                    dishId: item.dishId
-                }, { transaction });
-            }
+            const orderItemsData = basketItems.map(item => ({
+                price: item.dish.price,
+                amount: item.quantity,
+                orderId: order.id,
+                dishId: item.dishId
+            }));
 
-            for (const item of basketItems) {
-                await BasketItem.destroy({
-                    where: { id: item.id },
-                    transaction
-                });
-            }
+            await OrderItem.bulkCreate(orderItemsData, { transaction });
+            await BasketItem.destroy({
+                where: { basketId: basket.id },
+                transaction
+            });
 
             await transaction.commit();
             return res.json({ order });
@@ -98,10 +96,8 @@ class OrderController {
     // for client
     async getAllById(req, res, next) {
         const { id } = req.params;
-        let { dir, limit, page } = req.query;
-        page = parseInt(page) || 1;
-        limit = parseInt(limit) || 9;
-        let offset = page * limit - limit;
+        const { dir, limit, page } = req.query;
+        const { limit: queryLimit, offset } = getPagination(page, limit);
         let order = [];
 
         if (!Number(id)) {
@@ -117,7 +113,7 @@ class OrderController {
         try {
             const orders = await Order.findAndCountAll({
                 where: { userId: id },
-                limit,
+                limit: queryLimit,
                 offset,
                 order,
                 include: [

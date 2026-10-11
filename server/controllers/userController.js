@@ -26,8 +26,8 @@ class UserController {
             }
 
             transaction = await sequelize.transaction();
-            const hashPassword = await bcrypt.hash(password, 5);
-            const user = await User.create({ name, email, password: hashPassword, role: role || 'USER' }, { transaction });
+            const hashPassword = await bcrypt.hash(password, 10);
+            const user = await User.create({ name: name || '', email, password: hashPassword, role: 'USER' }, { transaction });
             await Basket.create({ userId: user.id }, { transaction });
             await transaction.commit();
 
