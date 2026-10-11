@@ -50,4 +50,24 @@ describe('Middleware Access Control API', () => {
 
         expect(res.statusCode).toBe(401);
     });
+
+    describe('Security Headers & Health Check', () => {
+        it('should set security headers and hide X-Powered-By', async () => {
+            const res = await request(app).get('/api/health');
+
+            expect(res.statusCode).toBe(200);
+            expect(res.headers['x-content-type-options']).toBe('nosniff');
+            expect(res.headers['x-frame-options']).toBe('SAMEORIGIN');
+            expect(res.headers['x-powered-by']).toBeUndefined();
+        });
+
+        it('should return 200 OK and database status on /api/health', async () => {
+            const res = await request(app).get('/api/health');
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.status).toBe('ok');
+            expect(res.body.database).toBe('connected');
+            expect(typeof res.body.uptime).toBe('number');
+        });
+    });
 });
