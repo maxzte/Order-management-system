@@ -1,11 +1,10 @@
-import { getToken } from '../../reg.js'
 import { DASHBOARD_ROUTE } from '../../../utils/const.js';
 import { fetchOrderData } from './orderPage.mjs'
+import { api } from '../../../utils/apiClient.js';
 
 
 const main = document.querySelector('.main_container');
 
-const token = getToken();
 let chartInstance = null;
 
 export async function dashboard() {
@@ -107,31 +106,13 @@ async function datePeriodActivator(event, datePeriod) {
 }
 
 async function fetchBasicOrderData() {
-    const response = await fetch(DASHBOARD_ROUTE, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-    });
-    return response.json();
+    return api.get(DASHBOARD_ROUTE);
 }
 
 async function fetchDateData() {
-    let date = document.querySelector('.name_input').value;
     let period = document.querySelector('.name_input').value;
-    // let req;
-    let req = DASHBOARD_ROUTE + `?period=${period}`;
-    // if (date != '') req = DASHBOARD_ROUTE + `?date=${date}&period=${period}`;
-    // else req = DASHBOARD_ROUTE + `?period=${period}`;
-    const response = await fetch(req, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-    });
-    return response.json();
+    let req = DASHBOARD_ROUTE + `?period=${encodeURIComponent(period)}`;
+    return api.post(req, {});
 }
 
 function createChart(aggregatedData) {

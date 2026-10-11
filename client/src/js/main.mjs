@@ -1,5 +1,6 @@
 import { fetchMenuData } from "./admin/pages/menuPage.mjs";
 import { basicUrlForStatic } from "../utils/const.js";
+import { setupHeaderNavigation } from "../utils/helpers.js";
 
 
 window.addEventListener('load', function () {
@@ -25,18 +26,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     createMenusCard(menus);
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id')
-
-    const orderBtn = document.querySelector('.order-button');
-    orderBtn.addEventListener('click', (e) => {
-        e.preventDefault()
-        window.location.href = `orders.html?id=${id}`
-    })
-
-    const basketBtn = document.querySelector('.basket-button');
-    basketBtn.addEventListener('click', (e) => {
-        e.preventDefault()
-        window.location.href = `basket.html?id=${id}`
-    })
+    setupHeaderNavigation(id);
 });
 
 function createMenusCard(menus) {
@@ -53,6 +43,7 @@ function createMenusCard(menus) {
         img.setAttribute('class', 'card-image')
         img.setAttribute('src', `${basicUrlForStatic}/static/${e.img}`)
         img.setAttribute('alt', 'Menu item')
+        img.setAttribute('loading', 'lazy')
         const title = document.createElement('h3')
         title.setAttribute('class', 'card-title')
         const ref = document.createElement('a')

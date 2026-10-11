@@ -1,5 +1,6 @@
 import { MENU_ROUTE, basicUrlForStatic } from "../../../utils/const.js";
 import { getToken } from "../../reg.js";
+import { escapeHtml, formatDate } from "../../../utils/helpers.js";
 
 const main = document.querySelector('.main_container');
 const token = getToken();
@@ -10,29 +11,22 @@ export async function menu() {
         let menuRows = ''
         main.innerHTML = '';
         menuData.rows.forEach(element => {
-            const categories = element.categories.map(category => category.name).join(', ');
-            const createdAt = new Date(element.createdAt);
-            const updatedAt = new Date(element.updatedAt);
-            const formattedCreatedAt = `${createdAt.getDate()}.${createdAt.getMonth() + 1}.${createdAt.getFullYear()} 
-            ${createdAt.getHours()}:${createdAt.getMinutes()}`;
-            const formattedUpdatedAt = `${updatedAt.getDate()}.${updatedAt.getMonth() + 1}.${updatedAt.getFullYear()} 
-            ${updatedAt.getHours()}:${updatedAt.getMinutes()}`;
-
+            const categories = element.categories ? element.categories.map(category => escapeHtml(category.name)).join(', ') : '';
+            const formattedCreatedAt = formatDate(element.createdAt);
             const imageUrl = `${basicUrlForStatic}/static/${element.img}`;
 
             menuRows += `
             <tr>
-                <td class="column">${element.id}</td>
-                <td class="column">${element.name}</td>
+                <td class="column">${escapeHtml(element.id)}</td>
+                <td class="column">${escapeHtml(element.name)}</td>
                 <td class="column">${categories}</td>
                 <td class="column">${formattedCreatedAt}</td>
                 <td class="column">
-                    <img class="image_table" src="${imageUrl}" alt="${element.name}"></img>
+                    <img class="image_table" src="${imageUrl}" alt="${escapeHtml(element.name)}"></img>
                 </td>
-                <!--<td class="column">${formattedUpdatedAt}</td>-->
                 <td class="column">
-                    <button class="delete" data-id="${element.id}">Del</button>
-                    <button class="update" data-id="${element.id}" data-bs-toggle="modal" data-bs-target=".edit-modal">Edit</button>
+                    <button class="delete" data-id="${escapeHtml(element.id)}">Del</button>
+                    <button class="update" data-id="${escapeHtml(element.id)}" data-bs-toggle="modal" data-bs-target=".edit-modal">Edit</button>
                 </td>
             </tr>
         `;

@@ -1,8 +1,8 @@
 import { USER_ROUTE } from "../../../utils/const.js";
-import { getToken } from "../../reg.js";
+import { escapeHtml, formatDate } from "../../../utils/helpers.js";
+import { api } from "../../../utils/apiClient.js";
 
 const main = document.querySelector('.main_container');
-const token = getToken();
 
 export async function user() {
     try {
@@ -11,19 +11,17 @@ export async function user() {
         let userRows = ''
         main.innerHTML = '';
         userData.rows.forEach(element => {
-            const createdAt = new Date(element.createdAt);
-            const formattedCreatedAt = `${createdAt.getDate()}.${createdAt.getMonth() + 1}.${createdAt.getFullYear()} 
-            ${createdAt.getHours()}:${createdAt.getMinutes()}`;
+            const formattedCreatedAt = formatDate(element.createdAt);
 
             userRows += `
             <tr>
-                <td class="column">${element.id}</td>
-                <td class="column">${element.name}</td>
-                <td class="column">${element.email}</td>
-                <td class="column">${element.role}</td>
+                <td class="column">${escapeHtml(element.id)}</td>
+                <td class="column">${escapeHtml(element.name)}</td>
+                <td class="column">${escapeHtml(element.email)}</td>
+                <td class="column">${escapeHtml(element.role)}</td>
                 <td class="column">${formattedCreatedAt}</td>
                 <td class="column">
-                    <button class="delete" data-id="${element.id}">Del</button>
+                    <button class="delete" data-id="${escapeHtml(element.id)}">Del</button>
                 </td>
             </tr>
         `;
@@ -64,7 +62,7 @@ export async function user() {
     `
         main.innerHTML += userHTML;
         submitBtnHandler();
-        deleteBtnHandler();
+        setupTableDelegation();
     } catch (e) {
         console.error('Error retrieving information for menu: ', e.message);
     }
@@ -79,76 +77,50 @@ function submitBtnHandler() {
     });
 }
 
-function deleteBtnHandler() {
-    let feedbackIdForDel = document.querySelectorAll('.delete');
-    feedbackIdForDel.forEach(el => {
-        el.addEventListener('click', async (e) => {
-            e.preventDefault()
-            const userId = el.getAttribute('data-id');
-            const res = await fetchDeleteUser(userId);
-            await user();
-        })
-    })
+function setupTableDelegation() {
+    const tableBody = document.querySelector('.dishTable_body');
+    if (tableBody) {
+        tableBody.addEventListener('click', async (e) => {
+            const delBtn = e.target.closest('.delete');
+            if (delBtn) {
+                e.preventDefault();
+                const userId = delBtn.getAttribute('data-id');
+                await fetchDeleteUser(userId);
+                await user();
+            }
+        });
+    }
 }
 
 export async function fetchUserData() {
-    const response = await fetch(USER_ROUTE, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-    });
-
-    return response.json();
+    return api.get(USER_ROUTE);
 }
 
 async function fetchUserById() {
-    let url
     const userId = document.querySelector('.name_input').value;
-    if (userId === '') url = USER_ROUTE
-    else url = USER_ROUTE + `/${userId}`
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-    });
-
-    return response.json();
+    const url = userId === '' ? USER_ROUTE : `${USER_ROUTE}/${encodeURIComponent(userId)}`;
+    return api.get(url);
 }
 
 async function fetchDeleteUser(userId) {
-    console.log(dishId)
-    const response = await fetch(USER_ROUTE + `/${userId}`, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-    });
-
-    return response.json();
+    return api.delete(`${USER_ROUTE}/${encodeURIComponent(userId)}`);
 }
 
 async function updateUserTable(userData) {
     const userTableBody = document.querySelector('.dishTable_body');
     userTableBody.innerHTML = '';
 
-    const createdAt = new Date(userData.createdAt);
-    const formattedCreatedAt = `${createdAt.getDate()}.${createdAt.getMonth() + 1}.${createdAt.getFullYear()} 
-        ${createdAt.getHours()}:${createdAt.getMinutes()}`;
+    const formattedCreatedAt = formatDate(userData.createdAt);
 
     const rowHTML = `
         <tr class="table_row" data-bs-toggle="modal" data-bs-target="#detailInfoModal">
-            <td class="column">${userData.id}</td>
-            <td class="column">${userData.name}</td>
-            <td class="column">${userData.email}</td>
-            <td class="column">${userData.role}</td>
+            <td class="column">${escapeHtml(userData.id)}</td>
+            <td class="column">${escapeHtml(userData.name)}</td>
+            <td class="column">${escapeHtml(userData.email)}</td>
+            <td class="column">${escapeHtml(userData.role)}</td>
             <td class="column">${formattedCreatedAt}</td>
             <td class="column">
-                <button class="delete" data-id="${userData.id}">Del</button>
+                <button class="delete" data-id="${escapeHtml(userData.id)}">Del</button>
             </td>
         </tr>`;
     userTableBody.innerHTML += rowHTML;

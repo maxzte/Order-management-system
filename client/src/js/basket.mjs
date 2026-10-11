@@ -1,4 +1,6 @@
 import { BASKET_ROUTE, ORDER_ROUTE } from "../utils/const.js"
+import { setupHeaderNavigation } from "../utils/helpers.js";
+import { api } from "../utils/apiClient.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const id = urlParams.get('id');
@@ -7,83 +9,39 @@ document.addEventListener("DOMContentLoaded", async function () {
     const res = await fetchAllBasketItems();
     createBasketTable(res);
     attachEventListeners();
-
-    document.querySelector('.home-button').addEventListener('click', e => {
-        e.preventDefault();
-        window.location.href = `index.html?id=${id}`
-    })
-
-    document.querySelector('.order-button').addEventListener('click', e => {
-        e.preventDefault();
-        window.location.href = `orders.html?id=${id}`
-    })
+    setupHeaderNavigation(id);
 });
 
 async function fetchAllBasketItems() {
-    const response = await fetch(BASKET_ROUTE + `/allItems/${id}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    });
-    return await response.json();
+    return api.get(BASKET_ROUTE + `/allItems/${id}`);
 }
 
 async function fetchDeleteItemFromBasket(basketItemId) {
-    const response = await fetch(BASKET_ROUTE + `/${basketItemId}`, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-    if (response.ok) {
-        const res = await fetchAllBasketItems();
-        createBasketTable(res);
-        attachEventListeners();
-    } else return await response.json();
+    await api.delete(BASKET_ROUTE + `/${basketItemId}`);
+    const res = await fetchAllBasketItems();
+    createBasketTable(res);
+    attachEventListeners();
 }
 
 async function fetchDeleteAllFromBasket() {
-    const response = await fetch(BASKET_ROUTE, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-    if (response.ok) {
-        const res = await fetchAllBasketItems();
-        createBasketTable(res);
-        attachEventListeners();
-    } else return await response.json();
+    await api.delete(BASKET_ROUTE);
+    const res = await fetchAllBasketItems();
+    createBasketTable(res);
+    attachEventListeners();
 }
 
 async function fetchUpdBasketItems(basketItemsArr) {
-    const response = await fetch(BASKET_ROUTE + `/${id}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(basketItemsArr)
-    })
-    if (response.ok) {
-        const res = await fetchAllBasketItems();
-        createBasketTable(res);
-        attachEventListeners();
-    } else return await response.json();
+    await api.patch(BASKET_ROUTE + `/${id}`, basketItemsArr);
+    const res = await fetchAllBasketItems();
+    createBasketTable(res);
+    attachEventListeners();
 }
 
 async function fetchCreateOrder() {
-    const response = await fetch(ORDER_ROUTE + `/${id}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-    if (response.ok) {
-        const res = await fetchAllBasketItems();
-        createBasketTable(res);
-        attachEventListeners();
-    } else return await response.json();
+    await api.post(ORDER_ROUTE + `/${id}`, {});
+    const res = await fetchAllBasketItems();
+    createBasketTable(res);
+    attachEventListeners();
 }
 
 function createBasketTable(basketItems) {
@@ -221,17 +179,21 @@ function attachEventListeners() {
     document.getElementById('checkoutButton').addEventListener('click', async (e) => {
         const basketItemsArr = []
         document.querySelectorAll('.row').forEach(r => {
-            const basketItemId = document.querySelector('.delBtn').getAttribute('delete-data-id')
-            const dishId = document.querySelector('.dishName').getAttribute('data-dish-id')
-            const dishQuantity = document.querySelector('.quantity').textContent
-            const basketItem = { basketItemId, dishId, quantity: parseInt(dishQuantity) };
-
-            basketItemsArr.push(basketItem);
-        })
-        console.log(basketItemsArr)
+            const delBtn = r.querySelector('.delBtn');
+            const dishName = r.querySelector('.dishName');
+            const quantityElem = r.querySelector('.quantity');
+            if (delBtn && dishName && quantityElem) {
+                const basketItemId = delBtn.getAttribute('delete-data-id');
+                const dishId = dishName.getAttribute('data-dish-id');
+                const dishQuantity = quantityElem.textContent;
+                const basketItem = { basketItemId, dishId, quantity: parseInt(dishQuantity) };
+                basketItemsArr.push(basketItem);
+            }
+        });
+        console.log(basketItemsArr);
         const res = await fetchUpdBasketItems(basketItemsArr);
-        console.log(res)
+        console.log(res);
         const orderRes = await fetchCreateOrder();
-        console.log(orderRes)
-    })
+        console.log(orderRes);
+    });
 }

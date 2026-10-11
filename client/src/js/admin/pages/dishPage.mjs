@@ -1,6 +1,7 @@
 import { basicUrlForStatic, CATEGORY_ROUTE, DISH_ROUTE } from "../../../utils/const.js";
 import { getToken } from "../../reg.js";
 import { fetchCategoryData } from "../pages/categoryPage.mjs";
+import { escapeHtml, formatDate } from "../../../utils/helpers.js";
 
 
 const main = document.querySelector('.main_container');
@@ -17,31 +18,24 @@ export async function dish() {
         main.innerHTML = '';
         dishRows = ''
         dishData.rows.forEach(element => {
-            const createdAt = new Date(element.createdAt);
-            const updatedAt = new Date(element.updatedAt);
-            const formattedCreatedAt = `${createdAt.getDate()}.${createdAt.getMonth() + 1}.${createdAt.getFullYear()} 
-            ${createdAt.getHours()}:${createdAt.getMinutes()}`;
-            const formattedUpdatedAt = `${updatedAt.getDate()}.${updatedAt.getMonth() + 1}.${updatedAt.getFullYear()} 
-            ${updatedAt.getHours()}:${updatedAt.getMinutes()}`;
-
+            const formattedCreatedAt = formatDate(element.createdAt);
             const imageUrl = `${basicUrlForStatic}/static/${element.img}`;
 
             dishRows += `
             <tr>
-                <td class="column">${element.id}</td>
-                <td class="column">${element.name}</td>
-                <td class="column">${element.price}</td>
-                <td class="column">${element.rating}</td>
-                <td class="column">${element.description}</td>
-                <td class="column">${element.category.name}</td>
+                <td class="column">${escapeHtml(element.id)}</td>
+                <td class="column">${escapeHtml(element.name)}</td>
+                <td class="column">${escapeHtml(element.price)}</td>
+                <td class="column">${escapeHtml(element.rating)}</td>
+                <td class="column">${escapeHtml(element.description)}</td>
+                <td class="column">${escapeHtml(element.category?.name)}</td>
                 <td class="column">${formattedCreatedAt}</td>
                 <td class="column">
-                    <img class="image_table" src="${imageUrl}" alt="${element.name}"></img>
+                    <img class="image_table" src="${imageUrl}" alt="${escapeHtml(element.name)}"></img>
                 </td>
-                <!--<td class="column">${formattedUpdatedAt}</td>-->
                 <td class="column">
-                    <button class="delete" data-id="${element.id}">Del</button>
-                    <button class="update" data-id="${element.id}" data-bs-toggle="modal" data-bs-target=".edit-modal">Edit</button>
+                    <button class="delete" data-id="${escapeHtml(element.id)}">Del</button>
+                    <button class="update" data-id="${escapeHtml(element.id)}" data-bs-toggle="modal" data-bs-target=".edit-modal">Edit</button>
                 </td>
             </tr>
         `;
@@ -391,26 +385,24 @@ async function fetchUpdDish(dishId) {
 function updateDishRows(sortedData) {
     dishRows = ''
     sortedData.rows.forEach(element => {
-        const createdAt = new Date(element.createdAt);
-        const formattedCreatedAt = `${createdAt.getDate()}.${createdAt.getMonth() + 1}.${createdAt.getFullYear()} 
-        ${createdAt.getHours()}:${createdAt.getMinutes()}`;
+        const formattedCreatedAt = formatDate(element.createdAt);
         const imageUrl = `${basicUrlForStatic}/static/${element.img}`;
 
         dishRows += `
         <tr>
-            <td class="column">${element.id}</td>
-            <td class="column">${element.name}</td>
-            <td class="column">${element.price}</td>
-            <td class="column">${element.rating}</td>
-            <td class="column">${element.description}</td>
-            <td class="column">${element.category.name}</td>
+            <td class="column">${escapeHtml(element.id)}</td>
+            <td class="column">${escapeHtml(element.name)}</td>
+            <td class="column">${escapeHtml(element.price)}</td>
+            <td class="column">${escapeHtml(element.rating)}</td>
+            <td class="column">${escapeHtml(element.description)}</td>
+            <td class="column">${escapeHtml(element.category?.name)}</td>
             <td class="column">${formattedCreatedAt}</td>
             <td class="column">
-                <img class="image_table" src="${imageUrl}" alt="${element.name}"></img>
+                <img class="image_table" src="${imageUrl}" alt="${escapeHtml(element.name)}"></img>
             </td>
             <td class="column">
-                <button class="delete" data-id="${element.id}">Del</button>
-                <button class="update" data-id="${element.id}" data-bs-toggle="modal" data-bs-target=".edit-modal">Edit</button>
+                <button class="delete" data-id="${escapeHtml(element.id)}">Del</button>
+                <button class="update" data-id="${escapeHtml(element.id)}" data-bs-toggle="modal" data-bs-target=".edit-modal">Edit</button>
             </td>
         </tr>
         `;

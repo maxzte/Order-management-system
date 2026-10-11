@@ -5,10 +5,17 @@ import { dish } from './pages/dishPage.mjs';
 import { order } from './pages/orderPage.mjs';
 import { feedback } from './pages/feedbackPage.mjs';
 import { user } from './pages/userPage.mjs';
+import { getToken } from '../reg.js';
+
 const navLogo = document.querySelector('.nav_logo');
 let title = document.querySelector('.header_title');
 
 document.addEventListener("DOMContentLoaded", async function (event) {
+    const token = getToken();
+    if (!token) {
+        window.location.href = 'register_form.html';
+        return;
+    }
     await dashboard();
     title.textContent = 'Dashboard';
     const showNavbar = (toggleId, navId, bodyId, headerId) => {
@@ -76,8 +83,10 @@ document.addEventListener("DOMContentLoaded", async function (event) {
             await feedback();
         else if (targetClassList.contains('bx-user'))
             await user();
-        else if (targetClassList.contains('bx-log-out'))
+        else if (targetClassList.contains('bx-log-out')) {
+            localStorage.removeItem('token');
             window.location.href = 'register_form.html';
+        }
     }));
 });
 

@@ -15,44 +15,78 @@ signupForm.addEventListener('submit', function (event) {
 });
 
 function checkLoginFormInputs() {
-    const emailValue = loginForm.querySelector('.Email').value.trim();
-    const passwordValue = loginForm.querySelector('.Password').value.trim();
     const emailField = loginForm.querySelector('.Email');
     const passwordField = loginForm.querySelector('.Password');
+    const emailValue = emailField.value.trim();
+    const passwordValue = passwordField.value.trim();
+    let isValid = true;
 
-    if (emailValue === '') setError(emailField, 'Email cannot be blank');
-    else if (!isEmail(emailValue)) setError(emailField, 'Not a valid email');
-    else setSuccess(emailField);
+    if (emailValue === '') {
+        setError(emailField, 'Email cannot be blank');
+        isValid = false;
+    } else if (!isEmail(emailValue)) {
+        setError(emailField, 'Not a valid email');
+        isValid = false;
+    } else {
+        setSuccess(emailField);
+    }
 
-    if (passwordValue === '') setError(passwordField, 'Password cannot be blank');
-    else if (!isPass(passwordValue)) setError(passwordField, 'Password isn`t valid!')
-    else setSuccess(passwordField);
+    if (passwordValue === '') {
+        setError(passwordField, 'Password cannot be blank');
+        isValid = false;
+    } else if (!isPass(passwordValue)) {
+        setError(passwordField, 'Password isn`t valid!');
+        isValid = false;
+    } else {
+        setSuccess(passwordField);
+    }
 
-    fetchData(LOGIN_ROUTE, emailValue, passwordValue);
+    if (isValid) {
+        fetchData(LOGIN_ROUTE, emailValue, passwordValue, loginForm);
+    }
 }
 
 function checkSignUpFormFormInputs() {
-    const emailValue = signupForm.querySelector('.Email').value.trim();
-    const passwordValue = signupForm.querySelector('.Password').value.trim();
-    const confirmPasswordValue = signupForm.querySelector('.ConfirmPassword').value.trim();
     const emailField = signupForm.querySelector('.Email');
     const passwordField = signupForm.querySelector('.Password');
     const confirmPasswordField = signupForm.querySelector('.ConfirmPassword');
+    const emailValue = emailField.value.trim();
+    const passwordValue = passwordField.value.trim();
+    const confirmPasswordValue = confirmPasswordField.value.trim();
+    let isValid = true;
 
-    if (emailValue === '') setError(emailField, 'Email cannot be blank');
-    else if (!isEmail(emailValue)) setError(emailField, 'Not a valid email');
-    else setSuccess(emailField);
+    if (emailValue === '') {
+        setError(emailField, 'Email cannot be blank');
+        isValid = false;
+    } else if (!isEmail(emailValue)) {
+        setError(emailField, 'Not a valid email');
+        isValid = false;
+    } else {
+        setSuccess(emailField);
+    }
 
-    if (passwordValue === '') setError(passwordField, 'Password cannot be blank');
-    if (confirmPasswordValue === '') setError(confirmPasswordField, 'Confirm password field cannot be blank')
-    else if (!isPass(passwordValue)) setError(passwordField, 'Password isn`t valid!');
-    else if (!isPass(confirmPasswordValue)) setError(confirmPasswordField, 'Confirm password field isn`t valid!');
-    else if (passwordValue !== confirmPasswordValue) setError(confirmPasswordField, 'Different passwords')
-    else {
-        setSuccess(confirmPasswordField);
+    if (passwordValue === '') {
+        setError(passwordField, 'Password cannot be blank');
+        isValid = false;
+    } else if (!isPass(passwordValue)) {
+        setError(passwordField, 'Password isn`t valid!');
+        isValid = false;
+    } else {
         setSuccess(passwordField);
+    }
 
-        fetchData(REGISTRATION_ROUTE, emailValue, passwordValue);
+    if (confirmPasswordValue === '') {
+        setError(confirmPasswordField, 'Confirm password field cannot be blank');
+        isValid = false;
+    } else if (passwordValue !== confirmPasswordValue) {
+        setError(confirmPasswordField, 'Different passwords');
+        isValid = false;
+    } else {
+        setSuccess(confirmPasswordField);
+    }
+
+    if (isValid) {
+        fetchData(REGISTRATION_ROUTE, emailValue, passwordValue, signupForm);
     }
 }
 
@@ -100,15 +134,21 @@ function setFieldSuccess(input) {
     input.classList.add('success');
 }
 
-async function fetchData(url, email, password) {
-    const data = { email, password, };
+async function fetchData(url, email, password, formElement) {
+    const data = { email, password };
     const result = await login(url, data);
+    if (!result) {
+        if (formElement) {
+            const passwordField = formElement.querySelector('.Password');
+            if (passwordField) {
+                setError(passwordField, 'Невірний email або пароль');
+            }
+        }
+        return;
+    }
     if (result.role === 'ADMIN') {
-        console.log('res')
-        console.log(result)
         window.location.href = `admin.html`;
-    } else if(result.role === 'USER'){
+    } else if (result.role === 'USER') {
         window.location.href = `index.html?id=${result.id}`;
     }
-    // else console.error('Login failed:', await result.json());
 }

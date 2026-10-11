@@ -1,36 +1,18 @@
 import { ORDER_ROUTE } from "../utils/const.js";
-
+import { formatDate, setupHeaderNavigation } from "../utils/helpers.js";
+import { api } from "../utils/apiClient.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const id = urlParams.get('id');
 
 document.addEventListener("DOMContentLoaded", async () => {
-    const res = await fetchAllOrderById(id)
-    console.log(res)
-
-
+    const res = await fetchAllOrderById(id);
     populateOrders(res);
-
-    document.querySelector('.home-button').addEventListener('click', e => {
-        e.preventDefault();
-        window.location.href = `index.html?id=${id}`
-    })
-
-    document.querySelector('.basket-button').addEventListener('click', e => {
-        e.preventDefault();
-        window.location.href = `basket.html?id=${id}`
-    })
+    setupHeaderNavigation(id);
 });
 
 async function fetchAllOrderById(userId) {
-    const response = await fetch(ORDER_ROUTE + `/all/${userId}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-
-    return await response.json();
+    return api.get(ORDER_ROUTE + `/all/${userId}`);
 }
 
 function populateOrders(orders) {
@@ -38,9 +20,7 @@ function populateOrders(orders) {
     const tbody = orderTable.querySelector("tBody");
 
     orders.rows.forEach((order, index) => {
-        const createdAt = new Date(order.createdAt);
-            const formattedCreatedAt = `${createdAt.getDate()}.${createdAt.getMonth() + 1}.${createdAt.getFullYear()} 
-            ${createdAt.getHours()}:${createdAt.getMinutes()}`;
+        const formattedCreatedAt = formatDate(order.createdAt);
         const orderRow = document.createElement("tr");
 
         const orderNumberCell = document.createElement("td");

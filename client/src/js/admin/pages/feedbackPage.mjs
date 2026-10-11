@@ -1,8 +1,8 @@
 import { FEEDBACK_ROUTE } from "../../../utils/const.js";
-import { getToken } from "../../reg.js";
+import { escapeHtml, formatDate } from "../../../utils/helpers.js";
+import { api } from "../../../utils/apiClient.js";
 
 const main = document.querySelector('.main_container');
-const token = getToken();
 
 export async function feedback() {
     try {
@@ -11,25 +11,20 @@ export async function feedback() {
         let feedbackRows = ''
         main.innerHTML = '';
         feedbackData.rows.forEach(element => {
-            const createdAt = new Date(element.createdAt);
-            const updatedAt = new Date(element.updatedAt);
-            const formattedCreatedAt = `${createdAt.getDate()}.${createdAt.getMonth() + 1}.${createdAt.getFullYear()} 
-            ${createdAt.getHours()}:${createdAt.getMinutes()}`;
-            const formattedUpdatedAt = `${updatedAt.getDate()}.${updatedAt.getMonth() + 1}.${updatedAt.getFullYear()} 
-            ${updatedAt.getHours()}:${updatedAt.getMinutes()}`;
+            const formattedCreatedAt = formatDate(element.createdAt);
 
             feedbackRows += `
             <tr>
-                <td class="column">${element.id}</td>
-                <td class="column">${element.text}</td>
-                <td class="column">${element.user.name}</td>
-                <td class="column">${element.userId}</td>
-                <td class="column">${element.user.email}</td>
-                <td class="column">${element.dish.name}</td>
-                <td class="column">${element.dishId}</td>
+                <td class="column">${escapeHtml(element.id)}</td>
+                <td class="column">${escapeHtml(element.text)}</td>
+                <td class="column">${escapeHtml(element.user?.name)}</td>
+                <td class="column">${escapeHtml(element.userId)}</td>
+                <td class="column">${escapeHtml(element.user?.email)}</td>
+                <td class="column">${escapeHtml(element.dish?.name)}</td>
+                <td class="column">${escapeHtml(element.dishId)}</td>
                 <td class="column">${formattedCreatedAt}</td>
                 <td class="column">
-                    <button class="delete" data-id="${element.userId}" data-dish-id="${element.dishId}">Del</button>
+                    <button class="delete" data-id="${escapeHtml(element.userId)}" data-dish-id="${escapeHtml(element.dishId)}">Del</button>
                 </td>
             </tr>
         `;
@@ -73,7 +68,7 @@ export async function feedback() {
     `
         main.innerHTML += feedbackHTML;
         submitBtnHandler();
-        deleteBtnHandler();
+        setupTableDelegation();
 
     } catch (e) {
         console.error('Error retrieving information for feedback: ', e.message);
@@ -84,87 +79,60 @@ function submitBtnHandler() {
     document.getElementById('submit_btn').addEventListener('click', async (e) => {
         e.preventDefault();
         const res = await fetchFeedbacksByDishId();
-        // console.log(res);
         updateOrderTable(res);
-        // await feedback();
     });
 }
 
-function deleteBtnHandler() {
-    let feedbackIdForDel = document.querySelectorAll('.delete');
-    feedbackIdForDel.forEach(el => {
-        el.addEventListener('click', async (e) => {
-            e.preventDefault()
-            const userId = el.getAttribute('data-id');
-            const dishId = el.getAttribute('data-dish-id');
-            // console.log(dishId)
-            const res = await fetchDeleteFeedback(userId, dishId);
-            // console.log(res)
-            await feedback();
-        })
-    })
+function setupTableDelegation() {
+    const tableBody = document.querySelector('.dishTable_body');
+    if (tableBody) {
+        tableBody.addEventListener('click', async (e) => {
+            const delBtn = e.target.closest('.delete');
+            if (delBtn) {
+                e.preventDefault();
+                const userId = delBtn.getAttribute('data-id');
+                const dishId = delBtn.getAttribute('data-dish-id');
+                await fetchDeleteFeedback(userId, dishId);
+                await feedback();
+            }
+        });
+    }
 }
 
 export async function fetchFeedbackData() {
-    const response = await fetch(FEEDBACK_ROUTE, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-    });
-
-    return response.json();
+    return api.get(FEEDBACK_ROUTE);
 }
 
 async function fetchFeedbacksByDishId() {
     const dishId = document.querySelector('.name_input').value;
-    const response = await fetch(FEEDBACK_ROUTE + `/${dishId}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-    });
-
-    return response.json();
+    const url = dishId ? `${FEEDBACK_ROUTE}/${encodeURIComponent(dishId)}` : FEEDBACK_ROUTE;
+    return api.get(url);
 }
 
 async function fetchDeleteFeedback(userId, dishId) {
-    console.log(dishId)
-    const response = await fetch(FEEDBACK_ROUTE + `/${userId}`, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        // body: { 'dishId': dishId },
+    return api.delete(`${FEEDBACK_ROUTE}/${encodeURIComponent(userId)}`, {
         body: JSON.stringify({ dishId })
     });
-
-    return response.json();
 }
 
 async function updateOrderTable(dishFeedbackData) {
     const orderTableBody = document.querySelector('.dishTable_body');
     orderTableBody.innerHTML = '';
     dishFeedbackData.rows.forEach(async element => {
-        const createdAt = new Date(element.createdAt);
-        const formattedCreatedAt = `${createdAt.getDate()}.${createdAt.getMonth() + 1}.${createdAt.getFullYear()} 
-        ${createdAt.getHours()}:${createdAt.getMinutes()}`;
+        const formattedCreatedAt = formatDate(element.createdAt);
 
         const rowHTML = `
         <tr class="table_row" data-bs-toggle="modal" data-bs-target="#detailInfoModal">
-            <td class="column">${element.id}</td>        
-            <td class="column">${element.text}</td>    
-            <td class="column">${element.user.name}</td>    
-            <td class="column">${element.userId}</td>    
-            <td class="column">${element.user.email}</td>    
-            <td class="column">${element.dish.name}</td>    
-            <td class="column">${element.dishId}</td>    
+            <td class="column">${escapeHtml(element.id)}</td>        
+            <td class="column">${escapeHtml(element.text)}</td>    
+            <td class="column">${escapeHtml(element.user?.name)}</td>    
+            <td class="column">${escapeHtml(element.userId)}</td>    
+            <td class="column">${escapeHtml(element.user?.email)}</td>    
+            <td class="column">${escapeHtml(element.dish?.name)}</td>    
+            <td class="column">${escapeHtml(element.dishId)}</td>    
             <td class="column">${formattedCreatedAt}</td>    
             <td class="column">    
-                <button class="delete" data-id="${element.userId}" data-dish-id="${element.dishId}">Del</button>
+                <button class="delete" data-id="${escapeHtml(element.userId)}" data-dish-id="${escapeHtml(element.dishId)}">Del</button>
             </td>    
         </tr>`;
         orderTableBody.innerHTML += rowHTML;

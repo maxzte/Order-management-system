@@ -1,5 +1,6 @@
 import { basicUrlForStatic, ORDER_ROUTE } from "../../../utils/const.js";
 import { getToken } from "../../reg.js";
+import { escapeHtml, formatDate } from "../../../utils/helpers.js";
 
 
 const main = document.querySelector('.main_container');
@@ -19,9 +20,7 @@ export async function order() {
         main.innerHTML = '';
         orderRows = ''
         orderData.rows.forEach(element => {
-            const createdAt = new Date(element.createdAt);
-            const formattedCreatedAt = `${createdAt.getDate()}.${createdAt.getMonth() + 1}.${createdAt.getFullYear()} 
-            ${createdAt.getHours()}:${createdAt.getMinutes()}`;
+            const formattedCreatedAt = formatDate(element.createdAt);
 
             const order = {
                 id: element.id,
@@ -36,14 +35,14 @@ export async function order() {
 
             orderRows += `
             <tr class="table_row" data-bs-toggle="modal" data-bs-target="#detailInfoModal">
-                <td class="column">${element.id}</td>
-                <td class="column">${element.user.name}</td>
-                <td class="column">${element.user.id}</td>
-                <td class="column">${element.orderAmount}</td>
-                <td class="column">${element.status}</td>
+                <td class="column">${escapeHtml(element.id)}</td>
+                <td class="column">${escapeHtml(element.user?.name)}</td>
+                <td class="column">${escapeHtml(element.user?.id)}</td>
+                <td class="column">${escapeHtml(element.orderAmount)}</td>
+                <td class="column">${escapeHtml(element.status)}</td>
                 <td class="column">${formattedCreatedAt}</td>
                 <td class="column">
-                    <button class="delete" data-id="${element.id}">Del</button>
+                    <button class="delete" data-id="${escapeHtml(element.id)}">Del</button>
                 </td>
             </tr>
         `;
@@ -473,35 +472,26 @@ async function updateOrderTable(sortedRows) {
     let data
     if (sortedRows.rows) data = sortedRows.rows
     else if (!sortedRows.rows) data = sortedRows
-    data.forEach(async element => {
-        const createdAt = new Date(element.createdAt);
-        const formattedCreatedAt = `${createdAt.getDate()}.${createdAt.getMonth() + 1}.${createdAt.getFullYear()} 
-        ${createdAt.getHours()}:${createdAt.getMinutes()}`;
+    data.forEach(element => {
+        const formattedCreatedAt = formatDate(element.createdAt);
+        const isCompleted = element.status === validStatuses[3] || element.status === validStatuses[2];
+        const hiddenClass = isCompleted ? ' hidden' : '';
 
         const rowHTML = `
         <tr class="table_row" data-bs-toggle="modal" data-bs-target="#detailInfoModal">
-                <td class="column">${element.id}</td>
-                <td class="column">${element.user.name}</td>
-                <td class="column">${element.userId}</td>
-                <td class="column">${element.orderAmount}</td>
-                <td class="column">${element.status}</td>
+                <td class="column">${escapeHtml(element.id)}</td>
+                <td class="column">${escapeHtml(element.user?.name)}</td>
+                <td class="column">${escapeHtml(element.userId)}</td>
+                <td class="column">${escapeHtml(element.orderAmount)}</td>
+                <td class="column">${escapeHtml(element.status)}</td>
                 <td class="column">${formattedCreatedAt}</td>
                 <td class="column">
-                    <button class="delete" data-id="${element.id}">Del</button>
-                    <button class="update" data-id="${element.id}" data-bs-toggle="modal" data-bs-target=".edit_order">Edit</button>
-                    <button class="upd_status" data-id="${element.id}" data-bs-toggle="modal" data-bs-target=".edit-modal">Upd status</button>
+                    <button class="delete" data-id="${escapeHtml(element.id)}">Del</button>
+                    <button class="update${hiddenClass}" data-id="${escapeHtml(element.id)}" data-bs-toggle="modal" data-bs-target=".edit_order">Edit</button>
+                    <button class="upd_status${hiddenClass}" data-id="${escapeHtml(element.id)}" data-bs-toggle="modal" data-bs-target=".edit-modal">Upd status</button>
                 </td>
         </tr>`;
         orderTableBody.innerHTML += rowHTML;
-        const updateStatusBtn = document.querySelector('.upd_status');
-        const updateOrderBtn = document.querySelector('.update');
-        if (element.status === validStatuses[3] || element.status === validStatuses[2]) {
-            updateStatusBtn.classList.add('hidden');
-            updateOrderBtn.classList.add('hidden');
-        } else {
-            updateStatusBtn.classList.remove('hidden');
-            updateOrderBtn.classList.remove('hidden');
-        }
     });
     setupSortDropdown();
     deleteOrderHandler();
@@ -515,16 +505,14 @@ async function updateOrderTable(sortedRows) {
 
 function showDetailInfoModalWindow(data) {
     // console.log(data);
-    const createdAt = new Date(data.createdAt);
-    const formattedCreatedAt = `${createdAt.getDate()}.${createdAt.getMonth() + 1}.${createdAt.getFullYear()} 
-    ${createdAt.getHours()}:${createdAt.getMinutes()}`;
+    const formattedCreatedAt = formatDate(data.createdAt);
 
     const userInfo = document.querySelector('.user-info-list');
-    userInfo.innerHTML = `ID: ${data.userId}, name: ${data.user.name}, email: ${data.user.email}`
+    userInfo.innerHTML = `ID: ${escapeHtml(data.userId)}, name: ${escapeHtml(data.user?.name)}, email: ${escapeHtml(data.user?.email)}`
 
     const orderInfo = document.querySelector('.order-info-list');
-    orderInfo.innerHTML = `<b>Total price: ${data.orderAmount}, status: ${data.status}</b>,<br>
-    ID: ${data.id}, created: ${formattedCreatedAt}`
+    orderInfo.innerHTML = `<b>Total price: ${escapeHtml(data.orderAmount)}, status: ${escapeHtml(data.status)}</b>,<br>
+    ID: ${escapeHtml(data.id)}, created: ${formattedCreatedAt}`
 
     const ul = document.querySelector('.order_items-list');
     const dishIds = new Set();
@@ -535,9 +523,9 @@ function showDetailInfoModalWindow(data) {
 
             const imageUrl = `${basicUrlForStatic}/static/${i.dish.img}`;
             const li = document.createElement('li');
-            li.innerHTML = `ID: ${i.id},<br>
+            li.innerHTML = `ID: ${escapeHtml(i.id)},<br>
             Dishes:<br>
-            ID: ${i.dishId}, name: ${i.dish.name}, price: ${i.dish.price} x ${i.amount}<br>`;
+            ID: ${escapeHtml(i.dishId)}, name: ${escapeHtml(i.dish?.name)}, price: ${escapeHtml(i.dish?.price)} x ${escapeHtml(i.amount)}<br>`;
             const img = document.createElement('img');
             img.setAttribute('class', 'image_table');
             img.setAttribute('src', imageUrl);

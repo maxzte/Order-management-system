@@ -20,14 +20,14 @@
                 <header>Login</header>
                 <form id="login-form" action="#">
                     <div class="field input-field">
-                        <input type="email" placeholder="Email" class="Email">
+                        <input type="email" placeholder="Email" class="Email" aria-describedby="login-email-error">
                         <i class="bx bx-user"></i>
-                        <small class="error-message" id="login-email-error"></small>
+                        <small class="error-message" id="login-email-error" aria-live="polite"></small>
                     </div>
                     <div class="field input-field">
-                        <input type="password" placeholder="Password" class="Password">
+                        <input type="password" placeholder="Password" class="Password" aria-describedby="login-password-error">
                         <i class='bx bxs-lock-alt'></i>
-                        <small class="error-message" id="login-password-error"></small>
+                        <small class="error-message" id="login-password-error" aria-live="polite"></small>
                     </div>
                     <div class="form-link">
                         <a href="#" class="forgot-pass">Forgot password?</a>
@@ -53,19 +53,19 @@
                 <header>Signup</header>
                 <form id="signup-form" action="#">
                     <div class="field input-field">
-                        <input type="email" placeholder="Email" class="Email">
+                        <input type="email" placeholder="Email" class="Email" aria-describedby="signup-email-error">
                         <i class="bx bx-user"></i>
-                        <small class="error-message" id="signup-email-error"></small>
+                        <small class="error-message" id="signup-email-error" aria-live="polite"></small>
                     </div>
                     <div class="field input-field">
-                        <input type="password" placeholder="Create password" class="Password">
+                        <input type="password" placeholder="Create password" class="Password" aria-describedby="signup-password-error">
                         <i class='bx bxs-lock-alt'></i>
-                        <small class="error-message" id="signup-password-error"></small>
+                        <small class="error-message" id="signup-password-error" aria-live="polite"></small>
                     </div>
                     <div class="field input-field">
-                        <input type="password" placeholder="Confirm password" class="ConfirmPassword">
+                        <input type="password" placeholder="Confirm password" class="ConfirmPassword" aria-describedby="confirm-password-error">
                         <i class='bx bxs-lock-alt'></i>
-                        <small class="error-message" id="confirm-password-error"></small>
+                        <small class="error-message" id="confirm-password-error" aria-live="polite"></small>
                     </div>
                     <div class="field button-field">
                         <button type="submit">Signup</button>

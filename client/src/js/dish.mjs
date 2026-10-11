@@ -1,94 +1,46 @@
 import { DISH_ROUTE, FEEDBACK_ROUTE, BASKET_ROUTE, basicUrlForStatic } from "../utils/const.js";
-
+import { formatDate, setupHeaderNavigation } from "../utils/helpers.js";
+import { api } from "../utils/apiClient.js";
 
 document.addEventListener("DOMContentLoaded", async function () {
-
     await fetchOneDishData();
     const comments = await getCommentsByDishId();
-
     createCommentsList(comments);
+
     const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get('id')
-
-    const orderBtn = document.querySelector('.order-button');
-    orderBtn.addEventListener('click', (e)=>{
-        e.preventDefault()
-        window.location.href = `orders.html?id=${id}`
-    })
-
-    const basketBtn = document.querySelector('.basket-button');
-    basketBtn.addEventListener('click', (e)=>{
-        e.preventDefault()
-        window.location.href = `basket.html?id=${id}`
-    })
-
-    const homeBtn = document.querySelector('.home-button');
-    homeBtn.addEventListener('click', (e)=>{
-        e.preventDefault()
-        window.location.href = `index.html?id=${id}`
-    })
-})
+    const id = urlParams.get('id');
+    setupHeaderNavigation(id);
+});
 
 async function fetchOneDishData() {
     const urlParams = new URLSearchParams(window.location.search);
     const dishId = urlParams.get('dishId');
-    const response = await fetch(DISH_ROUTE + `/${dishId}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    });
-
-    createDishCard(await response.json())
+    const data = await api.get(DISH_ROUTE + `/${dishId}`);
+    createDishCard(data);
 }
 
 async function postComment() {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
     const dishId = urlParams.get('dishId');
-    const text = document.getElementById('review').value
-    const response = await fetch(FEEDBACK_ROUTE + `/${id}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 'dishId': dishId, 'text': text })
-    })
-
-    if (response.ok) {
-        const comments = await getCommentsByDishId()
-        createCommentsList(comments);
-    }
-    // return await response.json();
+    const text = document.getElementById('review').value;
+    await api.post(FEEDBACK_ROUTE + `/${id}`, { dishId, text });
+    const comments = await getCommentsByDishId();
+    createCommentsList(comments);
 }
 
 async function getCommentsByDishId() {
     const urlParams = new URLSearchParams(window.location.search);
     const dishId = urlParams.get('dishId');
-    const response = await fetch(FEEDBACK_ROUTE + `/${dishId}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-
-    return await response.json();
+    return api.get(FEEDBACK_ROUTE + `/${dishId}`);
 }
 
 async function addItemToBasket() {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
     const dishId = urlParams.get('dishId');
-    const quantity = document.getElementById('quantity').textContent
-    const response = await fetch(BASKET_ROUTE + `/addDishes/${id}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 'dishId': dishId, 'quantity': quantity })
-    })
-
-    return await response.json();
+    const quantity = document.getElementById('quantity').textContent;
+    return api.post(BASKET_ROUTE + `/addDishes/${id}`, { dishId, quantity });
 }
 
 function createDishCard(dish) {
@@ -102,9 +54,7 @@ function createCommentsList(comments) {
     const commentsContainer = document.getElementById('reviews-list')
     commentsContainer.innerHTML = ''
     comments.rows.forEach(c => {
-        const createdAt = new Date(c.createdAt);
-        const formattedCreatedAt = `${createdAt.getDate()}.${createdAt.getMonth() + 1}.${createdAt.getFullYear()} 
-            ${createdAt.getHours()}:${createdAt.getMinutes()}`;
+        const formattedCreatedAt = formatDate(c.createdAt);
 
         const userInfoContainer = document.createElement('div')
         userInfoContainer.setAttribute('class', 'user-info_container')
