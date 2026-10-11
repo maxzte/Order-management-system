@@ -1,32 +1,59 @@
 const { Order, OrderItem, Dish, User, Basket, BasketItem, sequelize } = require('../models/models');
 const ApiError = require('../error/apiError');
-const { model } = require('../dataBase');
-
 
 class OrderController {
-    async create(req, res) {
+    async create(req, res, next) {
         const { userId } = req.params;
         let transaction;
         let orderAmount = 0;
+
+        if (!Number(userId)) {
+            return next(ApiError.badRequest('Invalid userId'));
+        }
+
         try {
             transaction = await sequelize.transaction();
+
+            let basket = await Basket.findOne({ where: { userId }, transaction });
+            if (!basket) {
+                basket = await Basket.findOne({ where: { id: userId }, transaction });
+            }
+
+            if (!basket) {
+                await transaction.rollback();
+                return next(ApiError.notFound('Basket not found for this user'));
+            }
+
             const basketItems = await BasketItem.findAll({
-                where: { basketId: userId },
-                include: [{ model: Dish }]
+                where: { basketId: basket.id },
+                include: [{ model: Dish }],
+                transaction
             });
 
-            for (const item of basketItems)
-                orderAmount += item.dish.price * item.quantity;
+            if (!basketItems || basketItems.length === 0) {
+                await transaction.rollback();
+                return next(ApiError.badRequest('Basket is empty'));
+            }
 
-            if (orderAmount <= 0)
-                return res.json(ApiError.badRequest('Total amount cannot be <= 0'));
+            for (const item of basketItems) {
+                if (!item.dish) {
+                    await transaction.rollback();
+                    return next(ApiError.badRequest('Dish in basket no longer exists'));
+                }
+                orderAmount += item.dish.price * item.quantity;
+            }
+
+            if (orderAmount <= 0) {
+                await transaction.rollback();
+                return next(ApiError.badRequest('Total amount cannot be <= 0'));
+            }
 
             const status = 'Обробка замовлення';
             const order = await Order.create({
                 orderAcceptanceTime: new Date(),
-                orderAmount,
+                orderAmount: parseFloat(orderAmount.toFixed(2)),
                 status,
-                userId
+                userId: basket.userId || userId
             }, { transaction });
 
             for (const item of basketItems) {
@@ -44,151 +71,138 @@ class OrderController {
                     transaction
                 });
             }
-            await transaction.commit();
 
+            await transaction.commit();
             return res.json({ order });
         } catch (e) {
             if (transaction) await transaction.rollback();
-            return res.json(ApiError.badRequest('something went wrong: ' + e));
+            return next(ApiError.internal('Something went wrong: ' + e.message));
         }
     }
 
-    // async create(req, res) {
-    //     const { userId } = req.params
-    //     let transaction;
-    //     let orderAmount = 0;
-    //     try {
-    //         const basketItems = await BasketItem.findAll({
-    //             where: { basketId: userId },
-    //             include: [{ model: Dish }]
-    //         });
-
-    //         for (const item of basketItems)
-    //             orderAmount += item.dish.price * item.quantity;
-
-    //         if (orderAmount <= 0)
-    //             return res.json(ApiError.badRequest('Total amount cannot be <= 0'));
-
-    //         const status = 'Обробка замовлення';
-    //         transaction = await sequelize.transaction();
-    //         const order = await Order.create({
-    //             orderAcceptanceTime: new Date(),
-    //             orderAmount,
-    //             status,
-    //             userId
-    //         }, { transaction });
-
-    //         await transaction.commit();
-    //         for (const item of basketItems) {
-    //             await OrderItem.create({
-    //                 price: item.dish.price,
-    //                 amount: item.quantity,
-    //                 orderId: order.id,
-    //                 dishId: item.dishId
-    //             });
-    //         }
-
-    //         return res.json({ order })
-    //     } catch (e) {
-    //         if (transaction) await transaction.rollback();
-    //         return res.json(ApiError.badRequest('something went wrong: ' + e))
-    //     }
-    // }
-
-    async getAll(req, res) {
-        const orders = await Order.findAndCountAll({ include: [{ model: User }] })
-        if (!orders)
-            return res.json(ApiError.badRequest('Not found!'))
-
-        return res.json(orders)
+    async getAll(req, res, next) {
+        try {
+            const orders = await Order.findAndCountAll({
+                include: [{
+                    model: User,
+                    attributes: ['id', 'name', 'email']
+                }],
+                order: [['createdAt', 'DESC']]
+            });
+            return res.json(orders);
+        } catch (e) {
+            return next(ApiError.internal(e.message));
+        }
     }
 
-    //for client
-    async getAllById(req, res) {
-        const { id } = req.params
-        let { dir, limit, page } = req.query
+    // for client
+    async getAllById(req, res, next) {
+        const { id } = req.params;
+        let { dir, limit, page } = req.query;
         page = parseInt(page) || 1;
         limit = parseInt(limit) || 9;
         let offset = page * limit - limit;
         let order = [];
-        if (!Number(id))
-            return res.json(ApiError.badRequest('not valid id'));
 
-        if (dir)
-            order.push(['createdAt', dir || 'DESC']);
+        if (!Number(id)) {
+            return next(ApiError.badRequest('Invalid id'));
+        }
 
-        const orders = await Order.findAndCountAll({
-            where: { userId: id },
-            limit,
-            offset,
-            order,
-            include: [
-                {
-                    model: User,
-                    attributes: ['name']
-                },
-                {
-                    model: OrderItem,
-                    include: [
-                        {
-                            model: Dish,
-                            attributes: ['name', 'price', 'img']
-                        }
-                    ]
-                }
-            ]
-        });
-        if (!orders)
-            return res.json(ApiError.badRequest('Not found!'))
+        if (dir) {
+            order.push(['createdAt', dir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC']);
+        } else {
+            order.push(['createdAt', 'DESC']);
+        }
 
-        return res.json(orders);
+        try {
+            const orders = await Order.findAndCountAll({
+                where: { userId: id },
+                limit,
+                offset,
+                order,
+                include: [
+                    {
+                        model: User,
+                        attributes: ['id', 'name', 'email']
+                    },
+                    {
+                        model: OrderItem,
+                        include: [
+                            {
+                                model: Dish,
+                                attributes: ['id', 'name', 'price', 'img']
+                            }
+                        ]
+                    }
+                ]
+            });
+
+            return res.json(orders);
+        } catch (e) {
+            return next(ApiError.internal(e.message));
+        }
     }
 
-    async getOne(req, res) {
+    async getOne(req, res, next) {
         const { id } = req.params;
-        const order = await Order.findOne({
-            where: { id },
-            include: [{
-                model: User,
-                attributes: ['id', 'name', 'email'],
-            },
-            {
-                model: OrderItem,
-                include: [{
-                    model: Dish,
-                    attributes: ['name', 'price', 'img'],
-                }],
-            },
-            ],
-        });
-        return res.json(order);
+        if (!Number(id)) {
+            return next(ApiError.badRequest('Invalid id'));
+        }
+
+        try {
+            const order = await Order.findOne({
+                where: { id },
+                include: [
+                    {
+                        model: User,
+                        attributes: ['id', 'name', 'email'],
+                    },
+                    {
+                        model: OrderItem,
+                        include: [{
+                            model: Dish,
+                            attributes: ['id', 'name', 'price', 'img'],
+                        }],
+                    },
+                ],
+            });
+
+            if (!order) {
+                return next(ApiError.notFound('Order not found'));
+            }
+
+            return res.json(order);
+        } catch (e) {
+            return next(ApiError.internal(e.message));
+        }
     }
 
-    //оновлюємо замовлення - видаляємо страву або оновлюємо кількість страв в замовленні
-    async updateOrder(req, res) {
+    async updateOrder(req, res, next) {
         const { userId } = req.params;
         const { dishId, quantity, del } = req.body;
         let transaction;
         let orderAmount = 0;
+
+        if (!Number(userId)) {
+            return next(ApiError.badRequest('Invalid userId!'));
+        }
+        if (!Number(dishId)) {
+            return next(ApiError.badRequest('Invalid dishId!'));
+        }
+
         try {
             transaction = await sequelize.transaction();
-            if (!Number(userId)) {
-                await transaction.rollback();
-                return res.json(ApiError.badRequest('Invalid userId!'));
-            }
-            if (!Number(dishId)) {
-                await transaction.rollback();
-                return res.json(ApiError.badRequest('Invalid dishId!'));
-            }
             const order = await Order.findOne({ where: { userId }, transaction });
             if (!order) {
                 await transaction.rollback();
-                return res.json(ApiError.badRequest('Order not found for this user'));
+                return next(ApiError.notFound('Order not found for this user'));
             }
+
             if (dishId && quantity) {
-                if (quantity <= 0 || !Number(quantity)) {
+                const parsedQuantity = Number(quantity);
+                if (parsedQuantity <= 0 || isNaN(parsedQuantity)) {
                     await transaction.rollback();
-                    return res.json(ApiError.badRequest('Not valid quantity!'));
+                    return next(ApiError.badRequest('Not valid quantity!'));
                 }
                 const orderItem = await OrderItem.findOne({
                     where: { orderId: order.id, dishId },
@@ -196,27 +210,33 @@ class OrderController {
                 });
                 if (!orderItem) {
                     await transaction.rollback();
-                    return res.json(ApiError.badRequest('Order item not found'));
+                    return next(ApiError.notFound('Order item not found'));
                 }
-                orderItem.amount = quantity;
+                orderItem.amount = parsedQuantity;
                 await orderItem.save({ transaction });
             } else if (dishId && del) {
                 const orderItem = await OrderItem.findOne({
                     where: { orderId: order.id, dishId },
                     transaction
                 });
-                if (orderItem) await orderItem.destroy()
+                if (orderItem) {
+                    await orderItem.destroy({ transaction });
+                }
             }
+
             const orderItems = await OrderItem.findAll({
                 where: { orderId: order.id },
                 include: [{ model: Dish }],
                 transaction
             });
-            for (const item of orderItems)
-                orderAmount += item.price * item.amount;
 
-            await order.update({ orderAmount }, { transaction });
+            for (const item of orderItems) {
+                orderAmount += item.price * item.amount;
+            }
+
+            await order.update({ orderAmount: parseFloat(orderAmount.toFixed(2)) }, { transaction });
             await transaction.commit();
+
             const updatedOrder = await Order.findOne({
                 where: { id: order.id },
                 include: [{ model: OrderItem, include: [Dish] }]
@@ -225,56 +245,69 @@ class OrderController {
             return res.json(updatedOrder);
         } catch (e) {
             if (transaction) await transaction.rollback();
-            return res.json(ApiError.badRequest('something went wrong: ' + e));
+            return next(ApiError.internal('Something went wrong: ' + e.message));
         }
     }
 
     async deleteOne(req, res, next) {
         const { id } = req.params;
         let transaction;
+
+        if (!Number(id)) {
+            return next(ApiError.badRequest('Invalid ID'));
+        }
+
         try {
             transaction = await sequelize.transaction();
-            if (!Number(id))
-                return res.json(ApiError.badRequest('Invalid ID'));
+            const order = await Order.findOne({ where: { id }, transaction });
+            if (!order) {
+                await transaction.rollback();
+                return next(ApiError.notFound('Order not found'));
+            }
 
-            const order = await Order.findOne({ where: { id } });
-            if (!order) return res.json(ApiError.notFound('Order not found'));
-            await order.destroy();
+            await OrderItem.destroy({ where: { orderId: order.id }, transaction });
+            await order.destroy({ transaction });
             await transaction.commit();
+
             return res.json({ message: 'Order deleted successfully' });
         } catch (e) {
             if (transaction) await transaction.rollback();
-            return res.json(e);
+            return next(ApiError.internal('Something went wrong: ' + e.message));
         }
     }
 
-    async updateStatus(req, res) {
+    async updateStatus(req, res, next) {
         const { orderId } = req.params;
         const { status } = req.body;
         let transaction;
+
+        if (!Number(orderId)) {
+            return next(ApiError.badRequest('Invalid order ID'));
+        }
+
+        const validStatuses = ['Обробка замовлення', 'Замовлення виконується', 'Замовлення виконане', 'Оплачено'];
+        if (!validStatuses.includes(status)) {
+            return next(ApiError.badRequest('Invalid status'));
+        }
+
         try {
             transaction = await sequelize.transaction();
-            if (!Number(orderId))
-                return res.json(ApiError.badRequest('Invalid order ID'));
-
-            const validStatuses = ['Обробка замовлення', 'Замовлення виконується', 'Замовлення виконане', 'Оплачено'];
-            if (!validStatuses.includes(status))
-                return res.json(ApiError.badRequest('Invalid status'));
-
-            const order = await Order.findByPk(orderId);
-            if (!order)
-                return res.json(ApiError.notFound('Order not found'));
+            const order = await Order.findByPk(orderId, { transaction });
+            if (!order) {
+                await transaction.rollback();
+                return next(ApiError.notFound('Order not found'));
+            }
 
             order.status = status;
-            await order.save();
+            await order.save({ transaction });
             await transaction.commit();
 
             return res.json({ order });
         } catch (e) {
             if (transaction) await transaction.rollback();
-            return res.json(e);
+            return next(ApiError.internal('Something went wrong: ' + e.message));
         }
     }
 }
 
-module.exports = new OrderController()
+module.exports = new OrderController();

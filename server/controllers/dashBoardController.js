@@ -4,7 +4,7 @@ const Sequelize = require('sequelize');
 const moment = require('moment');
 const Op = Sequelize.Op;
 
-class CategoryController {
+class DashBoardController {
     async getBasicInfo(req, res) {
         let basicInfo = {};
         try {
@@ -100,4 +100,4 @@ class CategoryController {
     }
 }
 
-module.exports = new CategoryController();
+module.exports = new DashBoardController();

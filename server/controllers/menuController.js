@@ -4,126 +4,149 @@ const uuid = require('uuid');
 const path = require('path');
 
 class MenuController {
-    async create(req, res) {
+    async create(req, res, next) {
         let { name, description } = req.body;
-        const { img } = req.files;
-        let fileName;
+        let fileName = '';
         let transaction;
-        try {
-            transaction = await sequelize.transaction();
-            if (img) {
-                fileName = uuid.v4() + '.jpg'
-                img.mv(path.resolve(__dirname, '..', 'static', fileName))
-            }
-            if (!name) {
-                await transaction.rollback();
-                return res.json(ApiError.badRequest('Name is empty!'));
-            }
-            const menu = await Menu.create({ name, description, img: fileName }, { transaction });
-            await transaction.commit();
 
+        if (!name) {
+            return next(ApiError.badRequest('Name is required!'));
+        }
+
+        try {
+            if (req.files && req.files.img) {
+                const img = req.files.img;
+                fileName = uuid.v4() + path.extname(img.name || '.jpg');
+                await img.mv(path.resolve(__dirname, '..', 'static', fileName));
+            }
+
+            transaction = await sequelize.transaction();
+            const menu = await Menu.create({
+                name,
+                description: description || '',
+                img: fileName
+            }, { transaction });
+
+            await transaction.commit();
             return res.json({ menu });
         } catch (e) {
             if (transaction) await transaction.rollback();
-            return res.json(ApiError.badRequest('Failed to create menu.' + e));
+            return next(ApiError.internal('Failed to create menu: ' + e.message));
         }
     }
 
-    async getAll(req, res) {
-        let { limit, page } = req.query;
-        page = parseInt(page) || 1;
-        limit = parseInt(limit) || 9;
-        let offset = page * limit - limit;
+    async getAll(req, res, next) {
+        try {
+            let { limit, page } = req.query;
+            page = parseInt(page) || 1;
+            limit = parseInt(limit) || 9;
+            let offset = page * limit - limit;
 
-        const menus = await Menu.findAndCountAll({
-            limit,
-            offset,
-            include: [{ model: Category, attributes: ['name'] }]
-        });
+            const menus = await Menu.findAndCountAll({
+                limit,
+                offset,
+                include: [{ model: Category, attributes: ['id', 'name'] }]
+            });
 
-        return res.json(menus);
+            return res.json(menus);
+        } catch (e) {
+            return next(ApiError.internal(e.message));
+        }
     }
 
-    async getOne(req, res) {
-        const { id } = req.params
-        if (!Number(id))
-            return res.json(ApiError.badRequest('Invalid ID'));
+    async getOne(req, res, next) {
+        const { id } = req.params;
+        if (!Number(id)) {
+            return next(ApiError.badRequest('Invalid ID'));
+        }
 
-        const menu = await Menu.findOne({
-            where: { id }, include: [{
-                model: Category,
-                attributes: [ 'id', 'name', 'description', 'img']
-            }]
-        });
-        if (menu === null)
-            return res.json(ApiError.badRequest('Not found'));
+        try {
+            const menu = await Menu.findOne({
+                where: { id },
+                include: [{
+                    model: Category,
+                    attributes: ['id', 'name', 'description', 'img']
+                }]
+            });
 
-        return res.json(menu)
+            if (!menu) {
+                return next(ApiError.notFound('Menu not found'));
+            }
+
+            return res.json(menu);
+        } catch (e) {
+            return next(ApiError.internal(e.message));
+        }
     }
 
-    async updateMenu(req, res) {
+    async updateMenu(req, res, next) {
         const { id } = req.params;
         let { name, description } = req.body;
-        const img = req.files ? req.files.img : null;
-        // const { img } = req.files.img;
-        let fileName;
         let transaction;
+
+        if (!Number(id)) {
+            return next(ApiError.badRequest('Invalid ID'));
+        }
+
         try {
             transaction = await sequelize.transaction();
-            if (img) {
-                fileName = uuid.v4() + '.jpg'
-                img.mv(path.resolve(__dirname, '..', 'static', fileName))
+            const existingMenu = await Menu.findOne({ where: { id }, transaction });
+            if (!existingMenu) {
+                await transaction.rollback();
+                return next(ApiError.notFound('Menu not found!'));
             }
-            
+
+            let fileName = existingMenu.img;
+            if (req.files && req.files.img) {
+                const img = req.files.img;
+                fileName = uuid.v4() + path.extname(img.name || '.jpg');
+                await img.mv(path.resolve(__dirname, '..', 'static', fileName));
+            }
+
+            const updateData = {};
+            if (name !== undefined) updateData.name = name;
+            if (description !== undefined) updateData.description = description;
+            if (fileName !== undefined) updateData.img = fileName;
+
+            await existingMenu.update(updateData, { transaction });
+            await transaction.commit();
+
+            const updatedMenu = await Menu.findByPk(id, {
+                include: [{ model: Category }]
+            });
+
+            return res.json(updatedMenu);
+        } catch (e) {
+            if (transaction) await transaction.rollback();
+            return next(ApiError.internal('Failed to update menu: ' + e.message));
+        }
+    }
+
+    async deleteOne(req, res, next) {
+        const { id } = req.params;
+        let transaction;
+
+        if (!Number(id)) {
+            return next(ApiError.badRequest('Invalid ID'));
+        }
+
+        try {
+            transaction = await sequelize.transaction();
             const menu = await Menu.findOne({ where: { id }, transaction });
             if (!menu) {
                 await transaction.rollback();
-                return res.json(ApiError.badRequest('Menu not found!'));
+                return next(ApiError.notFound('Menu not found'));
             }
-            const updateData = { name, description };
-            if (fileName) {
-                updateData.img = fileName;
-            }
-            const updMenu = await Menu.update(
-                updateData,
-                { where: { id }, transaction }
-            );
-            // const updMenu = await Menu.update(
-            //     { name, description, img: fileName },
-            //     { where: { id }, transaction }
-            // );
+
+            await menu.destroy({ transaction });
             await transaction.commit();
 
-            return res.json(updMenu);
+            return res.json({ message: 'Menu deleted successfully' });
         } catch (e) {
             if (transaction) await transaction.rollback();
-            return res.json(e);
-        }
-    }
-
-    async deleteOne(req, res) {
-        const { id } = req.params;
-        let transaction;
-        try {
-            transaction = await sequelize.transaction();
-            if (!Number(id)) {
-                await transaction.rollback();
-                return res.json(ApiError.badRequest('Invalid ID'));
-            }
-            const menu = await Menu.findOne({ where: { id } });
-            if (!menu) {
-                await transaction.rollback();
-                return res.json(ApiError.badRequest('Menu not found'));
-            }
-            await menu.destroy();
-            await transaction.commit();
-
-            return res.json('Menu deleted successfully');
-        } catch (e) {
-            if (transaction) await transaction.rollback();
-            return res.json(ApiError.badRequest('Not found or' + e));
+            return next(ApiError.internal('Error deleting menu: ' + e.message));
         }
     }
 }
 
-module.exports = new MenuController()
+module.exports = new MenuController();

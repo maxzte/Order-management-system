@@ -1,115 +1,149 @@
 const { Feedback, Dish, User, sequelize } = require('../models/models');
 const ApiError = require('../error/apiError');
-const router = require('../routes/feedbackRouter');
 
-class feedbackController {
-    async create(req, res) {
+class FeedbackController {
+    async create(req, res, next) {
         const { userId } = req.params;
         const { dishId, text } = req.body;
-        if (!Number(userId))
-            return res.json(ApiError.badRequest('Invalid id!'));
 
-        const feedback = await Feedback.create({ userId, dishId, text });
-        if (!feedback)
-            return res.json(ApiError.badRequest('User or dish not found!'))
+        if (!Number(userId) || !Number(dishId) || !text || !text.trim()) {
+            return next(ApiError.badRequest('Invalid input data!'));
+        }
 
-        return res.json(feedback)
+        try {
+            const user = await User.findByPk(userId);
+            if (!user) {
+                return next(ApiError.notFound('User not found!'));
+            }
+
+            const dish = await Dish.findByPk(dishId);
+            if (!dish) {
+                return next(ApiError.notFound('Dish not found!'));
+            }
+
+            const feedback = await Feedback.create({ userId, dishId, text: text.trim() });
+            return res.json(feedback);
+        } catch (e) {
+            return next(ApiError.internal('Failed to create feedback: ' + e.message));
+        }
     }
 
-    async getAll(req, res) {
-        let feedbacks;
+    async getAll(req, res, next) {
         try {
-            feedbacks = await Feedback.findAndCountAll({
+            const feedbacks = await Feedback.findAndCountAll({
                 include: [{
                     model: User,
                     attributes: ['id', 'name', 'email'],
                 }, {
                     model: Dish,
                     attributes: ['id', 'name'],
-                }]
+                }],
+                order: [['createdAt', 'DESC']]
             });
-            if (feedbacks.count === 0)
-                return res.json(ApiError.badRequest('Not found!'));
 
             return res.json(feedbacks);
         } catch (e) {
-            return res.json(ApiError.badRequest('Something went wrong: ' + e.message));
+            return next(ApiError.internal('Something went wrong: ' + e.message));
         }
     }
 
-    async getAllById(req, res) {
+    async getAllById(req, res, next) {
         const { dishId } = req.params;
-        let feedbacks;
+        if (!dishId || !Number(dishId)) {
+            return next(ApiError.badRequest('Invalid dishId!'));
+        }
+
         try {
-            if (!dishId) return res.json('Invalid dishId!')
-            else {
-                feedbacks = await Feedback.findAndCountAll({
-                    where: { dishId },
-                    include: [{
-                        model: User,
-                        attributes: ['id', 'name', 'email'],
-                    }, {
-                        model: Dish
-                    }]
-                });
-            }
-            if (feedbacks.count === 0)
-                return res.json(ApiError.badRequest('Not found!'));
+            const feedbacks = await Feedback.findAndCountAll({
+                where: { dishId },
+                include: [{
+                    model: User,
+                    attributes: ['id', 'name', 'email'],
+                }, {
+                    model: Dish,
+                    attributes: ['id', 'name'],
+                }],
+                order: [['createdAt', 'DESC']]
+            });
 
             return res.json(feedbacks);
         } catch (e) {
-            return res.json(ApiError.badRequest('Something went wrong: ' + e.message));
+            return next(ApiError.internal('Something went wrong: ' + e.message));
         }
     }
 
-    async updateComment(req, res) {
+    async updateComment(req, res, next) {
         const { userId } = req.params;
         const { dishId, text } = req.body;
         let transaction;
+
+        if (!Number(userId) || !Number(dishId) || !text) {
+            return next(ApiError.badRequest('Invalid input data!'));
+        }
+
         try {
             transaction = await sequelize.transaction();
             const feedback = await Feedback.findOne({
                 where: { userId, dishId },
                 transaction,
             });
+
             if (!feedback) {
                 await transaction.rollback();
-                return res.json(ApiError.badRequest('Feedback not found!'));
+                return next(ApiError.notFound('Feedback not found!'));
             }
-            await feedback.update({ text }, { transaction });
+
+            await feedback.update({ text: text.trim() }, { transaction });
+            await transaction.commit();
+
             const updatedFeedback = await Feedback.findOne({
                 where: { userId, dishId },
-                transaction,
+                include: [{
+                    model: User,
+                    attributes: ['id', 'name', 'email']
+                }, {
+                    model: Dish,
+                    attributes: ['id', 'name']
+                }]
             });
-            await transaction.commit();
 
             return res.json(updatedFeedback);
         } catch (e) {
             if (transaction) await transaction.rollback();
-            return res.json(ApiError.badRequest(e.message));
+            return next(ApiError.internal(e.message));
         }
     }
 
-    async deleteOne(req, res) {
+    async deleteOne(req, res, next) {
         const { userId } = req.params;
         const { dishId } = req.body;
         let transaction;
+
+        if (!Number(userId) || !Number(dishId)) {
+            return next(ApiError.badRequest('Invalid parameters!'));
+        }
+
         try {
             transaction = await sequelize.transaction();
-            const feedback = await Feedback.findOne({ where: { userId, dishId } });
+            const feedback = await Feedback.findOne({
+                where: { userId, dishId },
+                transaction
+            });
+
             if (!feedback) {
                 await transaction.rollback();
-                return res.json(ApiError.badRequest('Feedback not found!'))
+                return next(ApiError.notFound('Feedback not found!'));
             }
+
             await feedback.destroy({ transaction });
             await transaction.commit();
 
-            return res.json('Feedback was deleted')
+            return res.json({ message: 'Feedback was deleted' });
         } catch (e) {
             if (transaction) await transaction.rollback();
-            return res.json(e);
+            return next(ApiError.internal(e.message));
         }
     }
 }
 
-module.exports = new feedbackController();
+module.exports = new FeedbackController();

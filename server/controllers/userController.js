@@ -2,97 +2,133 @@ const { User, Basket, sequelize } = require('../models/models');
 const ApiError = require('../error/apiError');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { transaction } = require('../dataBase');
-
 
 const generateJwt = (id, email, role) => {
     return jwt.sign(
         { id, email, role },
         process.env.SECRET_KEY,
         { expiresIn: '24h' }
-    )
-}
+    );
+};
 
 class UserController {
-    async reg(req, res) {
-        const { email, password, name, role } = req.body
-        if (!email || !password)
-            return res.json(ApiError.badRequest('not valid password or email!'))
-
-        const candidate = await User.findOne({ where: { email } })
-        if (candidate)
-            return res.json(ApiError.badRequest('user with this email already exist!'))
-
-        const hashPassword = await bcrypt.hash(password, 5)
-        const user = await User.create({ name, email, password: hashPassword, role })
-        const basket = await Basket.create({ userId: user.id })
-        const token = generateJwt(user.id, user.email, user.role)
-
-        return res.json({ token })
-    }
-
-    async login(req, res) {
-        const { email, password } = req.body
-        const user = await User.findOne({ where: { email } })
-        if (!user)
-            return res.json(ApiError.internal('User not found!'))
-
-        let comparePassword = bcrypt.compareSync(password, user.password)
-        if (!comparePassword)
-            return res.json(ApiError.internal('Wrong password!'))
-
-        const token = generateJwt(user.id, user.email, user.role)
-        const id = user.id
-        const role = user.role;
-        
-        return res.json({ token, id, role })
-    }
-
-    async authCheck(req, res, next) {
-        const token = generateJwt(req.user.id, req.user.email, req.user.role)
-
-        return res.json({ token })
-    }
-
-    async getAllUsers(req, res) {
-        const users = await User.findAndCountAll();
-
-        return res.json(users);
-    }
-
-    async getOneUser(req, res) {
-        const { id } = req.params;
-        if (!Number(id))
-            return res.json(ApiError.badRequest('invalid id!'))
-
-        const user = await User.findOne({ where: { id } });
-
-        return res.json(user);
-    }
-
-    async delete(req, res) {
-        const { userId } = req.params;
+    async reg(req, res, next) {
         let transaction;
         try {
+            const { email, password, name, role } = req.body;
+            if (!email || !password) {
+                return next(ApiError.badRequest('Email and password are required!'));
+            }
+
+            const candidate = await User.findOne({ where: { email } });
+            if (candidate) {
+                return next(ApiError.badRequest('User with this email already exists!'));
+            }
+
             transaction = await sequelize.transaction();
-            if (!userId) {
-                await transaction.rollback();
-                return res.json(ApiError.badRequest('UserId is not valid!'));
-            }
-            const user = await User.findOne({ where: { userId } })
-            if (!user) {
-                await transaction.rollback();
-                return res.json(ApiError.badRequest('User not found!'));
-            }
-            await user.destroy();
+            const hashPassword = await bcrypt.hash(password, 5);
+            const user = await User.create({ name, email, password: hashPassword, role: role || 'USER' }, { transaction });
+            await Basket.create({ userId: user.id }, { transaction });
             await transaction.commit();
 
-            return res.json('User was deleted!');
+            const token = generateJwt(user.id, user.email, user.role);
+            return res.json({ token, id: user.id, role: user.role });
         } catch (e) {
             if (transaction) await transaction.rollback();
-            return res.json(ApiError.badRequest('Something went wrong: ' + e));
+            return next(ApiError.internal('Registration error: ' + e.message));
         }
     }
 
+    async login(req, res, next) {
+        try {
+            const { email, password } = req.body;
+            if (!email || !password) {
+                return next(ApiError.badRequest('Email and password are required!'));
+            }
+
+            const user = await User.findOne({ where: { email } });
+            if (!user) {
+                return next(ApiError.badRequest('User not found!'));
+            }
+
+            const comparePassword = bcrypt.compareSync(password, user.password);
+            if (!comparePassword) {
+                return next(ApiError.badRequest('Wrong password!'));
+            }
+
+            const token = generateJwt(user.id, user.email, user.role);
+            return res.json({ token, id: user.id, role: user.role });
+        } catch (e) {
+            return next(ApiError.internal('Login error: ' + e.message));
+        }
+    }
+
+    async authCheck(req, res, next) {
+        try {
+            const token = generateJwt(req.user.id, req.user.email, req.user.role);
+            return res.json({ token, id: req.user.id, role: req.user.role });
+        } catch (e) {
+            return next(ApiError.internal(e.message));
+        }
+    }
+
+    async getAllUsers(req, res, next) {
+        try {
+            const users = await User.findAndCountAll({
+                attributes: ['id', 'name', 'email', 'role', 'createdAt', 'updatedAt']
+            });
+            return res.json(users);
+        } catch (e) {
+            return next(ApiError.internal(e.message));
+        }
+    }
+
+    async getOneUser(req, res, next) {
+        try {
+            const { id } = req.params;
+            if (!Number(id)) {
+                return next(ApiError.badRequest('Invalid ID!'));
+            }
+
+            const user = await User.findOne({
+                where: { id },
+                attributes: ['id', 'name', 'email', 'role', 'createdAt', 'updatedAt']
+            });
+
+            if (!user) {
+                return next(ApiError.notFound('User not found!'));
+            }
+
+            return res.json(user);
+        } catch (e) {
+            return next(ApiError.internal(e.message));
+        }
+    }
+
+    async delete(req, res, next) {
+        const { userId } = req.params;
+        let transaction;
+        try {
+            if (!Number(userId)) {
+                return next(ApiError.badRequest('UserId is not valid!'));
+            }
+
+            transaction = await sequelize.transaction();
+            const user = await User.findOne({ where: { id: userId }, transaction });
+            if (!user) {
+                await transaction.rollback();
+                return next(ApiError.notFound('User not found!'));
+            }
+
+            await user.destroy({ transaction });
+            await transaction.commit();
+
+            return res.json({ message: 'User was deleted!' });
+        } catch (e) {
+            if (transaction) await transaction.rollback();
+            return next(ApiError.internal('Something went wrong: ' + e.message));
+        }
+    }
 }
-module.exports = new UserController()
+
+module.exports = new UserController();
